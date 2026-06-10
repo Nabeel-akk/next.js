@@ -161,6 +161,11 @@ impl BrowserChunkingContextBuilder {
         self
     }
 
+    pub fn inline_chunk_group_bootstrap(mut self, inline_chunk_group_bootstrap: bool) -> Self {
+        self.chunking_context.inline_chunk_group_bootstrap = inline_chunk_group_bootstrap;
+        self
+    }
+
     pub fn should_use_absolute_url_references(
         mut self,
         should_use_absolute_url_references: bool,
@@ -330,6 +335,10 @@ pub struct BrowserChunkingContext {
     enable_dynamic_chunk_content_loading: bool,
     /// Enable debug IDs for chunks and source maps.
     debug_ids: bool,
+    /// Expose each entrypoint's chunk group bootstrap params via
+    /// `ChunkGroupResult.chunk_group_bootstrap_params` instead of emitting the
+    /// per-route evaluate chunk, so the consumer can inline them.
+    inline_chunk_group_bootstrap: bool,
     /// The environment chunks will be evaluated in.
     environment: ResolvedVc<Environment>,
     /// The kind of runtime to include in the output.
@@ -407,6 +416,7 @@ impl BrowserChunkingContext {
                 enable_module_merging: false,
                 enable_dynamic_chunk_content_loading: false,
                 debug_ids: false,
+                inline_chunk_group_bootstrap: false,
                 environment,
                 runtime_type,
                 minify_type: MinifyType::NoMinify,
@@ -824,6 +834,7 @@ impl ChunkingContext for BrowserChunkingContext {
                 referenced_assets: OutputAssets::empty_resolved(),
                 references: ResolvedVc::cell(references),
                 availability_info,
+                chunk_group_bootstrap_params: None,
             }
             .cell())
         }
@@ -932,11 +943,25 @@ impl ChunkingContext for BrowserChunkingContext {
                 );
             }
 
-            assets.push(ResolvedVc::upcast(
-                self.generate_evaluate_chunk(ident, other_assets, entries)
-                    .to_resolved()
-                    .await?,
-            ));
+            // The evaluate chunk registers this entry's chunks/modules onto the
+            // `globalThis[TURBOPACK]` queue. When `inline_chunk_group_bootstrap` is enabled we
+            // return that chunk group's bootstrap params for Next to inline into the HTML and
+            // skip emitting the per-route evaluate chunk file. Only `ChunkGroup::Entry` groups
+            // (the page/app client entries Next renders into HTML) can be inlined.
+            let evaluate_chunk = self.generate_evaluate_chunk(ident, other_assets, entries);
+            let chunk_group_bootstrap_params = if this.inline_chunk_group_bootstrap
+                && matches!(chunk_group, ChunkGroup::Entry(_))
+            {
+                Some(
+                    evaluate_chunk
+                        .chunk_group_bootstrap_params()
+                        .owned()
+                        .await?,
+                )
+            } else {
+                assets.push(ResolvedVc::upcast(evaluate_chunk.to_resolved().await?));
+                None
+            };
 
             // The shared runtime chunk must be the LAST asset of the group. It drains
             // the registration queue set up by the chunks above, so it has to load
@@ -956,6 +981,7 @@ impl ChunkingContext for BrowserChunkingContext {
                 referenced_assets: OutputAssets::empty_resolved(),
                 references: ResolvedVc::cell(references),
                 availability_info,
+                chunk_group_bootstrap_params,
             }
             .cell())
         }
