@@ -615,6 +615,8 @@ function loadChunk(chunkData) {
     return loadChunkInternal(SourceType.Parent, this.m.id, chunkData);
 }
 browserContextPrototype.l = loadChunk;
+// `chunkPath` is the source chunk; it is `undefined` for entry-only registrations,
+// which have no self chunk (`SourceData` already allows this).
 function loadInitialChunk(chunkPath, chunkData) {
     return loadChunkInternal(SourceType.Runtime, chunkPath, chunkData);
 }
@@ -1977,6 +1979,18 @@ let BACKEND;
                 }
             }
         },
+        // Handles an inlined entry-only registration. Load the entry's other chunks and run its
+        // runtime modules with no source chunk (`undefined`).
+        async registerEntry (params) {
+            for (const otherChunkData of params.otherChunks){
+                const otherChunkUrl = getChunkRelativeUrl(getChunkPath(otherChunkData));
+                getOrCreateResolver(otherChunkUrl);
+            }
+            await Promise.all(params.otherChunks.map((otherChunkData)=>loadInitialChunk(undefined, otherChunkData)));
+            for (const moduleId of params.runtimeModuleIds){
+                getOrInstantiateRuntimeModule(undefined, moduleId);
+            }
+        },
         /**
      * Loads the given chunk, and returns a promise that resolves once the chunk
      * has been loaded.
@@ -2258,9 +2272,16 @@ function _eval({ code, url, map }) {
     // eslint-disable-next-line no-eval
     return eval(code);
 }
+function registerChunkOrEntry(registration) {
+    if (Array.isArray(registration)) {
+        registerChunk(registration);
+    } else {
+        BACKEND.registerEntry(registration);
+    }
+}
 var chunksToRegister = globalThis["TURBOPACK"];
-globalThis["TURBOPACK"] = { push: registerChunk };
-chunksToRegister.forEach(registerChunk);
+globalThis["TURBOPACK"] = { push: registerChunkOrEntry };
+chunksToRegister.forEach(registerChunkOrEntry);
 var chunkListsToRegister = globalThis["TURBOPACK_CHUNK_LISTS"] || [];
 globalThis["TURBOPACK_CHUNK_LISTS"] = { push: registerChunkList };
 chunkListsToRegister.forEach(registerChunkList);
