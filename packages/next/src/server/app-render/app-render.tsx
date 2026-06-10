@@ -27,6 +27,8 @@ import type {
   ValidationStoreClient,
 } from '../app-render/work-unit-async-storage.external'
 import type { NextParsedUrlQuery } from '../request-meta'
+import { getTurbopackChunkGroupBootstrap } from '../get-page-files'
+import { UNDERSCORE_NOT_FOUND_ROUTE_ENTRY } from '../../shared/lib/entry-constants'
 import type { LoaderTree } from '../lib/app-dir-module'
 import type { AppPageModule } from '../route-modules/app-page/module'
 import type { BaseNextRequest, BaseNextResponse } from '../base-http'
@@ -3309,7 +3311,7 @@ async function renderToStream(
   // header is not present, so we generate a random one.
   const bootstrapScriptContent = process.env.__NEXT_DEV_SERVER
     ? `self.__next_r=${JSON.stringify(requestId ?? crypto.randomUUID())}`
-    : undefined
+    : getTurbopackChunkGroupBootstrap(buildManifest, [page])
 
   // Create the "render route (app)" span manually so we can keep it open during streaming.
   // This is necessary because errors inside Suspense boundaries are reported asynchronously
@@ -4092,8 +4094,14 @@ async function renderToStream(
         subresourceIntegrityManifest,
         getAssetQueryString(ctx, false),
         nonce,
-        '/_not-found/page'
+        UNDERSCORE_NOT_FOUND_ROUTE_ENTRY
       )
+
+      const errorBootstrapScriptContent = process.env.__NEXT_DEV_SERVER
+        ? bootstrapScriptContent
+        : getTurbopackChunkGroupBootstrap(buildManifest, [
+            UNDERSCORE_NOT_FOUND_ROUTE_ENTRY,
+          ])
 
       if (process.env.__NEXT_USE_NODE_STREAMS) {
         // MARK: nodeStreams errorRecovery RSC + HTML
@@ -4150,7 +4158,7 @@ async function renderToStream(
               />,
               {
                 nonce,
-                bootstrapScriptContent,
+                bootstrapScriptContent: errorBootstrapScriptContent,
                 bootstrapScripts: [errorBootstrapScript],
                 formState,
               },
@@ -4249,7 +4257,7 @@ async function renderToStream(
               />,
               {
                 nonce,
-                bootstrapScriptContent,
+                bootstrapScriptContent: errorBootstrapScriptContent,
                 bootstrapScripts: [errorBootstrapScript],
                 formState,
               }
@@ -7225,6 +7233,11 @@ async function prerenderToStream(
     page
   )
 
+  const bootstrapScriptContent = getTurbopackChunkGroupBootstrap(
+    buildManifest,
+    [page]
+  )
+
   const { reactServerErrorsByDigest } = workStore
   // We don't report errors during prerendering through our instrumentation hooks
   const reportErrors = !experimental.isRoutePPREnabled
@@ -7576,6 +7589,7 @@ async function prerenderToStream(
                 )
               }
             },
+            bootstrapScriptContent,
             bootstrapScripts: [bootstrapScript],
           }
         )
@@ -8023,6 +8037,7 @@ async function prerenderToStream(
                 },
                 onHeaders: finalClientOnHeaders,
                 maxHeadersLength: reactMaxHeadersLength,
+                bootstrapScriptContent,
                 bootstrapScripts: [bootstrapScript],
               }
             )
@@ -8243,6 +8258,7 @@ async function prerenderToStream(
             onError: htmlRendererErrorHandler,
             onHeaders: pprOnHeaders,
             maxHeadersLength: reactMaxHeadersLength,
+            bootstrapScriptContent,
             bootstrapScripts: [bootstrapScript],
           }
         )
@@ -8465,6 +8481,7 @@ async function prerenderToStream(
         {
           onError: htmlRendererErrorHandler,
           nonce,
+          bootstrapScriptContent,
           bootstrapScripts: [bootstrapScript],
         },
         { waitForAllReady: true }
@@ -8581,7 +8598,12 @@ async function prerenderToStream(
       subresourceIntegrityManifest,
       getAssetQueryString(ctx, false),
       nonce,
-      '/_not-found/page'
+      UNDERSCORE_NOT_FOUND_ROUTE_ENTRY
+    )
+
+    const errorBootstrapScriptContent = getTurbopackChunkGroupBootstrap(
+      buildManifest,
+      [UNDERSCORE_NOT_FOUND_ROUTE_ENTRY]
     )
 
     if (cacheComponents) {
@@ -8754,6 +8776,7 @@ async function prerenderToStream(
               />,
               {
                 nonce,
+                bootstrapScriptContent: errorBootstrapScriptContent,
                 bootstrapScripts: [errorBootstrapScript],
                 formState,
                 signal: errorClientReactController.signal,
@@ -8993,6 +9016,7 @@ async function prerenderToStream(
         />,
         {
           nonce,
+          bootstrapScriptContent: errorBootstrapScriptContent,
           bootstrapScripts: [errorBootstrapScript],
           formState,
         },

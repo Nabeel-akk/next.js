@@ -605,7 +605,8 @@ pub async fn get_client_chunking_context(
                 },
             )
             .chunk_content_hashing(ContentHashing::Direct { length: 13 })
-            .module_merging(*scope_hoisting.await?);
+            .module_merging(*scope_hoisting.await?)
+            .inline_chunk_group_bootstrap(true);
     }
 
     Ok(Vc::upcast(builder.build()))
