@@ -48,7 +48,7 @@ use turbopack_core::{
     issue::{CollectibleIssuesExt, IssueFilter, IssueSeverity},
     module::Module,
     module_graph::{
-        GraphEntries, ModuleGraph, SingleModuleGraph,
+        GraphEntries, ModuleGraph, ModuleGraphOptions, SingleModuleGraph,
         binding_usage_info::compute_binding_usage_info,
         chunk_group_info::{ChunkGroup, ChunkGroupEntry},
     },
@@ -470,8 +470,16 @@ async fn run_test_operation(resource: RcStr) -> Result<Vc<FileSystemPath>> {
     let single_graph = SingleModuleGraph::new_with_entries(
         GraphEntries::from_chunk_groups(vec![ChunkGroupEntry::Entry(entry_modules.clone())])
             .resolved_cell(),
-        false,
-        true,
+        ModuleGraphOptions {
+            include_binding_usage: true,
+            // `compute_side_effect_free_module_info` (run below via `compute_binding_usage_info`
+            // when removing unused imports) reads `side_effects` from the graph node.
+            include_side_effects: options.remove_unused_imports,
+            // Module merging (driven by `scope_hoisting` in the chunking context below) reads
+            // `is_mergeable` from the graph node and bails if absent.
+            include_mergeable: options.scope_hoisting,
+            ..Default::default()
+        },
     );
     let mut module_graph = ModuleGraph::from_graphs(vec![single_graph], None);
 
