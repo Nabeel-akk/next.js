@@ -689,7 +689,7 @@ pub async fn compute_chunk_group_info(graph: &ModuleGraph) -> Result<Vc<ChunkGro
                             // groups inherit from their specific parent group; all other groups
                             // inherit from every chunk group of the referencing module.
                             if let Some(parent) = merged_parent {
-                                inherits_from.entry(parent as u32).or_default().insert(id);
+                                inherits_from.entry(parent).or_default().insert(id);
                             } else if let Some((parent_module, _, _)) = parent_info
                                 && let Some(parent_groups) = module_chunk_groups.get(&parent_module)
                             {
