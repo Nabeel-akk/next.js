@@ -1,6 +1,7 @@
 use std::{borrow::Cow, collections::BinaryHeap, hash::BuildHasherDefault, mem::take};
 
 use anyhow::{Context, Result};
+use roaring::RoaringBitmap;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 use tracing::{Instrument, field::Empty};
@@ -243,6 +244,10 @@ pub async fn make_production_chunks(
                 let priority_boost_percent =
                     priority_boost_percent.map_or(150, |percent| percent as i64);
 
+                // If chunk group clusters are configured in `next.config.js` and the patterns
+                // match at least one route.
+                let has_clusters = heuristics.clusters.iter().any(|c| !c.is_empty());
+
                 let mut iterations = 0;
                 while chunks_to_merge.len() > 1 {
                     // Find best candidate
@@ -407,14 +412,23 @@ pub async fn make_production_chunks(
                                 Request count is different in this case: Z + Z (better)
                                 Requests size is different (worse) in these cases: X + Z, Y + Z
 
-                                d_req_z_z = ((o_groups/groups) * (o_groups - 1)/rem_g) * (2 - 1)
-                                          = o_groups * (o_groups - 1) / (groups * rem_g)
+                                These cases are weighted based on their likelihood, by default:
+
+                                W(Z + Z) = 1
+                                W(X + Z) = 1
+                                W(Y + Z) = 1
+
+                                However, W(Z + Z) = 2, if the chunk items are in multiple groups in a
+                                "cluster" (see the chunking heuristics).
+
+                                d_req_z_z = W(Z + Z) * ((o_groups/groups) * (o_groups - 1)/rem_g) * (2 - 1)
+                                          = W(Z + Z) * (o_groups * (o_groups - 1) / (groups * rem_g))
                                 d_req_x_z = ((a_rem/groups) * (o_groups/rem_g) + (o_groups/groups) * (a_rem/rem_g)) * (2 - 2)
                                           = 0
                                 d_req_y_z = ((b_rem/groups) * (o_groups/rem_g) + (o_groups/groups) * (b_rem/rem_g)) * (2 - 2)
                                           = 0
 
-                                d_req(N = 2) = o_groups * (o_groups - 1) / (groups * rem_g)
+                                d_req(N = 2) = W(Z + Z) * (o_groups * (o_groups - 1) / (groups * rem_g))
 
                                 d_size_x_z = ((a_rem/groups) * (o_groups/rem_g) + (o_groups/groups) * (a_rem/rem_g)) * (a_size + b_size - (a_size + (a_size + b_size)))
                                            = ((2 * a_rem * o_groups) / (groups * rem_g)) * (-a_size)
@@ -424,8 +438,8 @@ pub async fn make_production_chunks(
                                 d_size(N = 2) = -2 * (a_rem * a_size + b_rem * b_size) * o_groups / (groups * rem_g)
 
                                 d(N = 2) = d_req(N = 2) * c_req + d_size(N = 2)
-                                         = (o_groups * (o_groups - 1) * c_req) / (groups * rem_g) - (2 * (a_rem * a_size + b_rem * b_size) * o_groups) / (groups * rem_g)
-                                         = (o_groups * (o_groups - 1) * c_req - 2 * (a_rem * a_size + b_rem * b_size) * o_groups) / (groups * rem_g)
+                                         = (W(Z + Z) * o_groups * (o_groups - 1) * c_req) / (groups * rem_g) - (2 * (a_rem * a_size + b_rem * b_size) * o_groups) / (groups * rem_g)
+                                         = (W(Z + Z) * o_groups * (o_groups - 1) * c_req - 2 * (a_rem * a_size + b_rem * b_size) * o_groups) / (groups * rem_g)
                             */
 
                             /*
@@ -438,7 +452,7 @@ pub async fn make_production_chunks(
                                d_req = P(N = 1) * d_req(N = 1) + P(N = 2) * d_req(N = 2)
 
                                `d_size` is always <= 0, so for d > 0, d_req * c_req must be
-                               positive:
+                               positive. The maths below assumes W(Z + Z) = 1:
 
                                d > 0
                                d_req * c_req > 0
@@ -470,6 +484,8 @@ pub async fn make_production_chunks(
                             // in `o_groups` would be a chunk group that requests both chunk items.
 
                             let mut is_priority_route = false;
+                            // This variable is W(Z + Z) above.
+                            let mut wz: i64 = 1;
                             if let (Some(a), Some(b)) =
                                 (&candidate.chunk_groups, &other.chunk_groups)
                             {
@@ -478,6 +494,23 @@ pub async fn make_production_chunks(
                                 // if there is one chunk group in `o_groups` that is a priority
                                 // route, we should prioritise merging these two chunk items.
                                 is_priority_route = !o.is_disjoint(&heuristics.priority_routes);
+
+                                // If the chunk groups sharing both chunks include two routes in
+                                // the same cluster, weight the `N = 2` Z+Z request benefit higher
+                                // so commonly co-visited pages
+                                // merge more readily.
+                                if has_clusters {
+                                    // clusters that these chunk groups are in
+                                    let mut seen = RoaringBitmap::new();
+                                    for index in o.iter() {
+                                        let clusters = &heuristics.clusters[index as usize];
+                                        if clusters.iter().any(|&c| seen.contains(c as u32)) {
+                                            wz = 2;
+                                            break;
+                                        }
+                                        seen.extend(clusters.iter().map(|&c| c as u32));
+                                    }
+                                }
                             }
 
                             let p1 = if is_priority_route {
@@ -490,7 +523,7 @@ pub async fn make_production_chunks(
 
                             // pre_dw = PROB_SCALE * d * (rem_g * groups) / o_groups
                             let pre_dw = p1 * rem_g * c_req
-                                + p2 * ((o_groups - 1) * c_req
+                                + p2 * (wz * (o_groups - 1) * c_req
                                     - 2 * (a_rem * a_size + b_rem * b_size));
                             // It need to have some runtime benefit of merging the chunks
                             if pre_dw < 0 {
