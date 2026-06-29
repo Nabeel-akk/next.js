@@ -1,6 +1,7 @@
 use std::{borrow::Cow, collections::BinaryHeap, hash::BuildHasherDefault, mem::take};
 
 use anyhow::{Context, Result};
+use roaring::RoaringBitmap;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 use tracing::{Instrument, field::Empty};
@@ -243,6 +244,10 @@ pub async fn make_production_chunks(
                 let priority_boost_percent =
                     priority_boost_percent.map_or(150, |percent| percent as i64);
 
+                // If chunk group clusters are configured in `next.config.js` and the patterns
+                // match at least one route.
+                let has_clusters = heuristics.clusters.iter().any(|c| !c.is_empty());
+
                 let mut iterations = 0;
                 while chunks_to_merge.len() > 1 {
                     // Find best candidate
@@ -296,6 +301,12 @@ pub async fn make_production_chunks(
                             let b_rem = b_groups - o_groups;
 
                             /*
+                                This comment describes the algorithm with the default
+                                probabilities, 2/3 for N=1 and 1/3 for N=2 as well as
+                                the default request-cost. The six combinations in the
+                                N=2 case are also weighted equally. These things can
+                                change if custom chunking heuristics are configured.
+
                                 UNMERGED CASE
 
                                 from the total of `groups` chunk groups
@@ -401,25 +412,40 @@ pub async fn make_production_chunks(
                                 Request count is different in this case: Z + Z (better)
                                 Requests size is different (worse) in these cases: X + Z, Y + Z
 
-                                d_req_z_z = ((o_groups/groups) * (o_groups - 1)/rem_g) * (2 - 1)
-                                          = o_groups * (o_groups - 1) / (groups * rem_g)
-                                d_req_x_z = ((a_rem/groups) * (o_groups/rem_g) + (o_groups/groups) * (a_rem/rem_g)) * (2 - 2)
+                                Each cost / benefit is weighted by the probabilities above. There are cases when
+                                we know that Z + Z is more likely due to common user behaviour. This is based on
+                                the "cluster" chunking heuristic we provide. We increase P(Z + Z) when two or more
+                                routes in a cluster request both chunk items together (ie. request Z). P(X + Z) and
+                                P(Y + Z) are therefore less likely. To increase P(Z + Z) while maintaining a total
+                                probability of 1, we do the following (when chunk items overlap in a cluster):
+
+                                P'(X + Z) = (1/2) * P(X + Z)
+                                P'(Y + Z) = (1/2) * P(Y + Z)
+                                P'(Z + Z) = P(Z + Z) + (1/2) * P(X + Z) + (1/2) * P(Y + Z)
+
+                                Otherwise:
+
+                                P'(X + Z) = P(X + Z)
+                                P'(Y + Z) = P(Y + Z)
+                                P'(Z + Z) = P(Z + Z)
+
+                                d_req_z_z = P'(Z + Z) * (2 - 1)
+                                          = P'(Z + Z)
+                                d_req_x_z = P'(X + Z) * (2 - 2)
                                           = 0
-                                d_req_y_z = ((b_rem/groups) * (o_groups/rem_g) + (o_groups/groups) * (b_rem/rem_g)) * (2 - 2)
+                                d_req_y_z = P'(Y + Z) * (2 - 2)
                                           = 0
 
-                                d_req(N = 2) = o_groups * (o_groups - 1) / (groups * rem_g)
+                                d_req(N = 2) = P'(Z + Z)
 
-                                d_size_x_z = ((a_rem/groups) * (o_groups/rem_g) + (o_groups/groups) * (a_rem/rem_g)) * (a_size + b_size - (a_size + (a_size + b_size)))
-                                           = ((2 * a_rem * o_groups) / (groups * rem_g)) * (-a_size)
-                                           = -2 * a_rem * a_size * o_groups / (groups * rem_g)
-                                d_size_y_z = -2 * b_rem * b_size * o_groups / (groups * rem_g)
+                                d_size_x_z = P'(X + Z) * (a_size + b_size - (a_size + (a_size + b_size)))
+                                           = P'(X + Z) * (-a_size)
+                                d_size_y_z = P'(Y + Z) * (-b_size)
 
-                                d_size(N = 2) = -2 * (a_rem * a_size + b_rem * b_size) * o_groups / (groups * rem_g)
+                                d_size(N = 2) = -(P'(X + Z) * a_size + P'(Y + Z) * b_size)
 
                                 d(N = 2) = d_req(N = 2) * c_req + d_size(N = 2)
-                                         = (o_groups * (o_groups - 1) * c_req) / (groups * rem_g) - (2 * (a_rem * a_size + b_rem * b_size) * o_groups) / (groups * rem_g)
-                                         = (o_groups * (o_groups - 1) * c_req - 2 * (a_rem * a_size + b_rem * b_size) * o_groups) / (groups * rem_g)
+                                         = P'(Z + Z) * c_req - (P'(X + Z) * a_size + P'(Y + Z) * b_size)
                             */
 
                             /*
@@ -432,7 +458,9 @@ pub async fn make_production_chunks(
                                d_req = P(N = 1) * d_req(N = 1) + P(N = 2) * d_req(N = 2)
 
                                `d_size` is always <= 0, so for d > 0, d_req * c_req must be
-                               positive:
+                               positive. The maths below assumes the non-cluster case,
+                               P'(Z + Z) = P(Z + Z); the shift only increases d_req, so the
+                               condition derived below holds for the cluster case too:
 
                                d > 0
                                d_req * c_req > 0
@@ -464,6 +492,8 @@ pub async fn make_production_chunks(
                             // in `o_groups` would be a chunk group that requests both chunk items.
 
                             let mut is_priority_route = false;
+                            // Whether the overlap includes two routes in the same cluster.
+                            let mut cluster_overlap = false;
                             if let (Some(a), Some(b)) =
                                 (&candidate.chunk_groups, &other.chunk_groups)
                             {
@@ -473,6 +503,23 @@ pub async fn make_production_chunks(
                                 // priority route, we should prioritise merging these two chunk
                                 // items.
                                 is_priority_route = !o.is_disjoint(&heuristics.priority_routes);
+
+                                // If the chunk groups sharing both chunks include two routes in
+                                // the same cluster, weight the `N = 2` Z+Z request benefit higher
+                                // so commonly co-visited pages
+                                // merge more readily.
+                                if has_clusters {
+                                    // clusters that these chunk groups are in
+                                    let mut seen = RoaringBitmap::new();
+                                    for index in o.iter() {
+                                        let clusters = &heuristics.clusters[index as usize];
+                                        if clusters.iter().any(|&c| seen.contains(c as u32)) {
+                                            cluster_overlap = true;
+                                            break;
+                                        }
+                                        seen.extend(clusters.iter().map(|&c| c as u32));
+                                    }
+                                }
                             }
 
                             let p1 = if is_priority_route {
@@ -483,10 +530,15 @@ pub async fn make_production_chunks(
 
                             let p2 = 100 - p1;
 
+                            // `d(N = 2)` scaled by (rem_g * groups) / o_groups, see above.
+                            let d_n2 = if cluster_overlap {
+                                rem_g * c_req - (a_rem * a_size + b_rem * b_size)
+                            } else {
+                                (o_groups - 1) * c_req - 2 * (a_rem * a_size + b_rem * b_size)
+                            };
+
                             // pre_dw = PROB_SCALE * d * (rem_g * groups) / o_groups
-                            let pre_dw = p1 * rem_g * c_req
-                                + p2 * ((o_groups - 1) * c_req
-                                    - 2 * (a_rem * a_size + b_rem * b_size));
+                            let pre_dw = p1 * rem_g * c_req + p2 * d_n2;
                             // It need to have some runtime benefit of merging the chunks
                             if pre_dw < 0 {
                                 continue;
