@@ -616,7 +616,7 @@ function loadChunk(chunkData) {
 }
 browserContextPrototype.l = loadChunk;
 // `chunkPath` is the source chunk; it is `undefined` for entry-only registrations,
-// which have no self chunk (`SourceData` already allows this).
+// which have no self chunk.
 function loadInitialChunk(chunkPath, chunkData) {
     return loadChunkInternal(SourceType.Runtime, chunkPath, chunkData);
 }
