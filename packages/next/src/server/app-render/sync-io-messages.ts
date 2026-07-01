@@ -60,6 +60,7 @@ export function createSyncIORuntimeError(
   expression: string,
   type: SyncIOApiType
 ): Error {
+  // TODO(sync-io): make sure this makes sense?
   return createSyncIOErrorImpl(
     route,
     expression,

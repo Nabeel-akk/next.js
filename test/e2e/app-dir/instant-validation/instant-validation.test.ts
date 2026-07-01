@@ -1084,6 +1084,7 @@ describe('instant validation', () => {
       }
     })
 
+    // TODO(sync-io): needs updating
     it('invalid - runtime prefetch - sync IO in runtime segment with valid static parent', async () => {
       // The static parent layout has sync IO after cookies() which is fine
       // because it's not runtime-prefetchable. But the page itself has
@@ -1145,6 +1146,7 @@ describe('instant validation', () => {
       }
     })
 
+    // TODO(sync-io): needs updating
     it('invalid - runtime prefetch - sync IO after public cache with cookie input', async () => {
       // A public "use cache" function receives cookies() as a promise
       // input (for cache keying). The cache body doesn't read the cookies.
