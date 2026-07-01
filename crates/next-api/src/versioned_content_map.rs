@@ -15,7 +15,7 @@ use turbopack_core::{
     version::OptionVersionedContent,
 };
 
-use crate::aggregate_hmr::{HmrChunkWithContent, is_hmr_eligible_chunk};
+use crate::aggregate_hmr::{HmrChunkWithContent, is_aggregate_hmr_entry_chunk};
 
 #[derive(
     Clone, TraceRawVcs, PartialEq, Eq, ValueDebugFormat, Debug, NonLocalValue, Encode, Decode,
@@ -90,7 +90,9 @@ impl VersionedContentMap {
         .resolved_cell()
     }
 
-    /// Lists every HMR-eligible chunk under `root` with its [`VersionedContent`]
+    /// Lists the aggregate-HMR *entry* chunks under `root` with their
+    /// [`VersionedContent`]. See [`is_aggregate_hmr_entry_chunk`] for why only
+    /// entry chunks are returned.
     pub async fn hmr_chunks_in_path(
         self: Vc<Self>,
         root: &FileSystemPath,
@@ -105,7 +107,7 @@ impl VersionedContentMap {
             .into_iter()
             .filter_map(|path| {
                 let rel = root.get_path_to(&path)?;
-                if !is_hmr_eligible_chunk(rel) {
+                if !is_aggregate_hmr_entry_chunk(rel) {
                     return None;
                 }
                 Some((RcStr::from(rel), path))
