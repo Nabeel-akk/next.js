@@ -261,6 +261,7 @@ import {
   RENDER_STAGE_ADVANCE_ORDER,
   RenderStage,
   StagedRenderingController,
+  SyncIOMode,
   type AdvanceableRenderStage,
 } from './staged-rendering'
 import {
@@ -953,7 +954,7 @@ async function generateStagedDynamicFlightRenderResultNode(
     // TODO(cached-navs): this assumes that we checked during build that there's no sync IO.
     // but it can happen e.g. after a revalidation or conditionally for a param that wasn't prerendered.
     // we should change this to track sync IO, log an error and advance to dynamic.
-    shouldTrackSyncIO: false,
+    syncIO: SyncIOMode.Untracked,
     finalStage: null,
   })
 
@@ -1178,7 +1179,7 @@ async function stagedRenderWithoutCachesInDevNode(
   const stageController = new StagedRenderingController({
     abortSignal: null,
     abandonController: null,
-    shouldTrackSyncIO: false, // do not track sync IO (we don't have reliable stages)
+    syncIO: SyncIOMode.Untracked, // do not track sync IO (we don't have reliable stages)
     finalStage: null,
   })
 
@@ -1719,7 +1720,8 @@ async function finalRuntimeServerPrerender(
   const finalStageController = new StagedRenderingController({
     abortSignal: finalServerController.signal,
     abandonController: null,
-    shouldTrackSyncIO: true,
+    // runtime prefetches are only usable in `partialPrefetching`
+    syncIO: SyncIOMode.AllowedInDynamic,
     // we only reach the runtime stage if we're doing a rewindable render
     finalStage:
       mode.type === 'session-shell-only'
@@ -3476,7 +3478,7 @@ async function renderToStream(
           // TODO(cached-navs): this assumes that we checked during build that there's no sync IO.
           // but it can happen e.g. after a revalidation or conditionally for a param that wasn't prerendered.
           // we should change this to track sync IO, log an error and advance to dynamic.
-          shouldTrackSyncIO: false,
+          syncIO: SyncIOMode.Untracked,
           finalStage: null,
         })
 
@@ -4508,6 +4510,7 @@ async function prepareValidationInputs(
           getPayload,
           onError,
           prerenderResumeDataCache,
+          prefetchMode,
           shouldRenderWithAppShell
         )
         if (forwardErrorsFromWarmRender(instantInputs, ctx)) {
@@ -4537,6 +4540,7 @@ async function prepareValidationInputs(
     getPayload,
     onError,
     prerenderResumeDataCache,
+    prefetchMode,
     shouldRenderWithAppShell
   )
   if (forwardErrorsFromWarmRender(instantInputs, ctx)) {
@@ -4641,6 +4645,15 @@ async function getPrefetchingModeForPage(
   return PrefetchingMode.LegacySpeculative
 }
 
+function getSyncIOMode(prefetchMode: PrefetchingMode): SyncIOMode {
+  switch (prefetchMode) {
+    case PrefetchingMode.LegacySpeculative:
+      return SyncIOMode.AllowedInRuntimeOrDynamic
+    case PrefetchingMode.Partial:
+      return SyncIOMode.AllowedInDynamic
+  }
+}
+
 /**
  * Per-render setup shared by the streaming dev Cache Components renders: a
  * cache signal (so caches fill in the background), a prerender resume data
@@ -4648,6 +4661,7 @@ async function getPrefetchingModeForPage(
  * the request store.
  */
 function setUpStagedDevRender(
+  prefetchingMode: PrefetchingMode,
   navigationKind: DevNavigationKind,
   requestStore: RequestStore
 ): StagedDevRenderSetup {
@@ -4659,7 +4673,7 @@ function setUpStagedDevRender(
   const stageController = new StagedRenderingController({
     abortSignal: null,
     abandonController: null,
-    shouldTrackSyncIO: true,
+    syncIO: getSyncIOMode(prefetchingMode),
     finalStage: null,
   })
   requestStore.resumeDataCache = prerenderResumeDataCache
@@ -4980,6 +4994,7 @@ async function renderWithWarmCachesForValidationInDev(
   getPayload: (requestStore: RequestStore) => Promise<RSCPayload>,
   onError: (error: unknown) => void,
   prerenderResumeDataCache: ReturnType<typeof createPrerenderResumeDataCache>,
+  prefetchMode: PrefetchingMode,
   shouldRenderWithAppShell: boolean
 ): Promise<DevValidationInputs> {
   const { ComponentMod, setReactDebugChannel } = ctx.renderOpts
@@ -4988,7 +5003,7 @@ async function renderWithWarmCachesForValidationInDev(
   const stageController = new StagedRenderingController({
     abortSignal: null,
     abandonController: null,
-    shouldTrackSyncIO: true,
+    syncIO: getSyncIOMode(prefetchMode),
     finalStage: null,
   })
 
@@ -5067,6 +5082,9 @@ async function renderWithWarmCachesForStaticValidationInDev(
   onError: (error: unknown) => void,
   prerenderResumeDataCache: ReturnType<typeof createPrerenderResumeDataCache>
 ): Promise<DevValidationInputs> {
+  // This function is currently only used in partialPrefetching.
+  const prefetchMode = PrefetchingMode.Partial
+
   const { ComponentMod, setReactDebugChannel } = ctx.renderOpts
   const { clientModules } = getClientReferenceManifest()
 
@@ -5079,7 +5097,7 @@ async function renderWithWarmCachesForStaticValidationInDev(
   const stageController = new StagedRenderingController({
     abortSignal: finalDataController.signal,
     abandonController: null,
-    shouldTrackSyncIO: true,
+    syncIO: getSyncIOMode(prefetchMode),
     finalStage: RenderStage.Runtime,
   })
 
@@ -5243,7 +5261,7 @@ async function stagedRenderWithCachesInDev({
     prerenderResumeDataCache,
     stageController,
     environmentName,
-  } = setUpStagedDevRender(navigationKind, requestStore)
+  } = setUpStagedDevRender(prefetchMode, navigationKind, requestStore)
 
   let validationDebugChannel: AnyStream | undefined
   const debugChannel = setReactDebugChannel && createNodeDebugChannel()
@@ -6678,7 +6696,7 @@ async function renderWithRestartOnCacheMissInValidation(
   const initialStageController = new StagedRenderingController({
     abortSignal: initialDataController.signal,
     abandonController: initialAbandonController,
-    shouldTrackSyncIO: true,
+    syncIO: getSyncIOMode(prefetchMode),
     finalStage: null,
   })
 
@@ -6793,7 +6811,7 @@ async function renderWithRestartOnCacheMissInValidation(
   const finalStageController = new StagedRenderingController({
     abortSignal: finalDataController.signal,
     abandonController: null,
-    shouldTrackSyncIO: true,
+    syncIO: getSyncIOMode(prefetchMode),
     finalStage: null,
   })
 
@@ -7875,7 +7893,7 @@ async function prerenderToStream(
       const finalStageController = new StagedRenderingController({
         abortSignal: finalServerRenderController.signal,
         abandonController: null,
-        shouldTrackSyncIO: true,
+        syncIO: SyncIOMode.AllowedInDynamic,
         finalStage: RenderStage.Static,
       })
 
