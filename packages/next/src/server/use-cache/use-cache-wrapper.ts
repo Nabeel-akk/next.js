@@ -3283,7 +3283,8 @@ async function computeCacheKeyImplementationPart(
   const serverModuleMapEntry = getServerModuleMap()?.[id]
   if (
     typeof serverModuleMapEntry?.codeHash === 'string' &&
-    serverModuleMapEntry?.runtimeEnvVars
+    // if runtimeEnvVars===true, then always invalidate
+    Array.isArray(serverModuleMapEntry?.runtimeEnvVars)
   ) {
     let runtimeEnvVarsWithValues: string[] = await Promise.all(
       serverModuleMapEntry?.runtimeEnvVars?.map(async (v) => {
