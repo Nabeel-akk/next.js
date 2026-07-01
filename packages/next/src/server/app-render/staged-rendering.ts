@@ -184,14 +184,18 @@ export class StagedRenderingController {
     }
   }
 
+  /** Note: only call this if `shouldTrackSyncInterrupt()` returned true */
   syncInterruptCurrentStageWithReason(reason: Error) {
-    if (this.currentStage === RenderStage.Before) {
-      return
-    }
-
-    // If the render has already been abandoned, there's nothing to interrupt.
-    if (this.currentStage === RenderStage.Abandoned) {
-      return
+    switch (this.currentStage) {
+      case RenderStage.Before:
+      case RenderStage.ShellRuntime:
+      case RenderStage.Runtime:
+      case RenderStage.Dynamic:
+      case RenderStage.Abandoned: {
+        // Not interruptible. Defensive noop.
+        return
+      }
+      default:
     }
 
     // If Sync IO occurs during an abandonable render, we trigger the abandon.
@@ -214,35 +218,8 @@ export class StagedRenderingController {
     // If we're in a non-abandonable & non-abortable render,
     // we need to advance to the Dynamic stage and capture the interruption reason.
     // (in dev, this will be the restarted render)
-    switch (this.currentStage) {
-      case RenderStage.ShellEarlyStatic:
-      case RenderStage.ShellStatic:
-      case RenderStage.EarlyStatic:
-      case RenderStage.Static:
-      case RenderStage.ShellEarlyRuntime:
-      case RenderStage.EarlyRuntime: {
-        // EarlyRuntime is for runtime-prefetchable segments. Sync IO here
-        // means the prefetch would be aborted too early.
-        this.syncInterruptReason = reason
-        this.advanceStage(RenderStage.Dynamic)
-        return
-      }
-      case RenderStage.ShellRuntime:
-      case RenderStage.Runtime: {
-        // `shouldTrackSyncInterrupt` returns false for [Shell]Runtime, so we should
-        // never get here. Defensive no-op.
-        break
-      }
-      case RenderStage.Dynamic: {
-        // `shouldTrackSyncInterrupt` returns false for Dynamic, so we should
-        // never get here. Defensive no-op.
-
-        break
-      }
-      default: {
-        this.currentStage satisfies never
-      }
-    }
+    this.syncInterruptReason = reason
+    this.advanceStage(RenderStage.Dynamic)
   }
 
   getSyncInterruptReason() {
@@ -281,34 +258,24 @@ export class StagedRenderingController {
           "A render that hasn't started yet cannot be abandoned"
         )
       }
-      case RenderStage.ShellEarlyStatic:
-      case RenderStage.EarlyStatic:
-      case RenderStage.ShellStatic:
-      case RenderStage.Static:
-      case RenderStage.ShellEarlyRuntime:
-      case RenderStage.EarlyRuntime:
-      case RenderStage.ShellRuntime:
-      case RenderStage.Runtime: {
-        // Resolve all stages after the current one, up to runtime (excluding dynamic)
-        const nextStageIx = RENDER_STAGE_ADVANCE_ORDER.indexOf(currentStage) + 1
-        const dynamicStageIx = RENDER_STAGE_ADVANCE_ORDER.indexOf(
-          RenderStage.Dynamic
-        )
-        for (let i = nextStageIx; i < dynamicStageIx; i++) {
-          this.resolveStage(RENDER_STAGE_ADVANCE_ORDER[i])
-        }
-
-        this.currentStage = RenderStage.Abandoned
-        break
-      }
       case RenderStage.Dynamic:
       case RenderStage.Abandoned: {
-        break
+        // We shouldn't ever trigger an abandon in these. Defensive noop.
+        return
       }
-      default: {
-        currentStage satisfies never
-      }
+      default:
     }
+
+    // Resolve all stages after the current one, up to runtime (excluding dynamic)
+    const nextStageIx = RENDER_STAGE_ADVANCE_ORDER.indexOf(currentStage) + 1
+    const dynamicStageIx = RENDER_STAGE_ADVANCE_ORDER.indexOf(
+      RenderStage.Dynamic
+    )
+    for (let i = nextStageIx; i < dynamicStageIx; i++) {
+      this.resolveStage(RENDER_STAGE_ADVANCE_ORDER[i])
+    }
+
+    this.currentStage = RenderStage.Abandoned
   }
 
   advanceStage(targetStage: AdvanceableRenderStage) {
@@ -317,43 +284,31 @@ export class StagedRenderingController {
         `Attempted to advance to stage ${RenderStage[targetStage]} but the render is limited to ${RenderStage[this.finalStage]}`
       )
     }
+    const { currentStage } = this
+    switch (currentStage) {
+      case RenderStage.Dynamic:
+      case RenderStage.Abandoned: {
+        // Nowhere left to advance.
+        return
+      }
+      default:
+    }
+
     // If we're already at the target stage or beyond, do nothing.
-    // (this can happen e.g. if sync IO advanced us to the dynamic stage)
-    if (targetStage <= this.currentStage) {
+    if (targetStage <= currentStage) {
       return
     }
 
-    const { currentStage } = this
     this.currentStage = targetStage
 
-    switch (currentStage) {
-      case RenderStage.Before:
-      case RenderStage.ShellEarlyStatic:
-      case RenderStage.EarlyStatic:
-      case RenderStage.ShellStatic:
-      case RenderStage.Static:
-      case RenderStage.ShellEarlyRuntime:
-      case RenderStage.EarlyRuntime:
-      case RenderStage.ShellRuntime:
-      case RenderStage.Runtime: {
-        // Resolve all stages between the current stage and the target.
-        const nextStageIx =
-          currentStage === RenderStage.Before
-            ? 0
-            : RENDER_STAGE_ADVANCE_ORDER.indexOf(currentStage) + 1
-        const targetStageIx = RENDER_STAGE_ADVANCE_ORDER.indexOf(targetStage)
-        for (let i = nextStageIx; i <= targetStageIx; i++) {
-          this.resolveStage(RENDER_STAGE_ADVANCE_ORDER[i])
-        }
-        break
-      }
-      case RenderStage.Dynamic:
-      case RenderStage.Abandoned: {
-        break
-      }
-      default: {
-        currentStage satisfies never
-      }
+    // Resolve all stages between the current stage and the target.
+    const nextStageIx =
+      currentStage === RenderStage.Before
+        ? 0
+        : RENDER_STAGE_ADVANCE_ORDER.indexOf(currentStage) + 1
+    const targetStageIx = RENDER_STAGE_ADVANCE_ORDER.indexOf(targetStage)
+    for (let i = nextStageIx; i <= targetStageIx; i++) {
+      this.resolveStage(RENDER_STAGE_ADVANCE_ORDER[i])
     }
   }
 
