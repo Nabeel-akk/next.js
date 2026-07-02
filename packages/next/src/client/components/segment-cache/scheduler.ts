@@ -10,6 +10,7 @@ import {
 import { matchSegment } from '../match-segments'
 import {
   readOrCreateRouteCacheEntry,
+  readRouteCacheEntry,
   readOrCreateSegmentCacheEntry,
   fetchRouteOnCacheMiss,
   fetchSegmentsOnCacheMiss,
@@ -576,9 +577,14 @@ function processQueueInMicrotask() {
         continue
       case PrefetchTaskExitStatus.Done:
         if (task.phase === PrefetchPhase.RouteTree) {
-          // Finished prefetching the route tree. If App Shells are enabled,
-          // run the Shell phase next; otherwise go straight to Speculative.
-          task.phase = process.env.__NEXT_APP_SHELLS
+          // Finished prefetching the route tree. The two-phase (Shell then
+          // Speculative) flow only applies to routes that have opted into
+          // Partial Prefetching — either globally via the `partialPrefetching`
+          // config or per segment (`instant`, `prefetch: 'partial'`, or
+          // `'unstable_eager'`), both surfaced as the
+          // `SubtreeHasPartialPrefetching` hint on the route tree. Every other
+          // route skips the Shell phase and goes straight to Speculative.
+          task.phase = routeHasPartialPrefetching(now, task)
             ? PrefetchPhase.Shell
             : PrefetchPhase.Speculative
           heapResift(taskHeap, task)
@@ -649,6 +655,38 @@ function background(task: PrefetchTask): boolean {
   }
   task.hasBackgroundWork = true
   return false
+}
+
+/**
+ * Whether a route tree has opted into Partial Prefetching. Mirrors the server's
+ * `anySegmentHasPartialPrefetchingEnabled`: a route counts as Partial
+ * Prefetching if it enabled it globally (the `partialPrefetching` config
+ * defaults every segment's `prefetch` to 'partial') or per segment via
+ * `instant`, `prefetch: 'partial'`, or `'unstable_eager'` (all surfaced as
+ * `SubtreeHasPartialPrefetching`) or `prefetch: 'allow-runtime'` (surfaced as
+ * `SubtreeHasRuntimePrefetch`). Only these routes use the two-phase (Shell then
+ * Speculative) prefetch flow; every other route does a single Speculative pass.
+ */
+function treeHasPartialPrefetching(prefetchHints: number): boolean {
+  return (
+    (prefetchHints &
+      (PrefetchHint.SubtreeHasPartialPrefetching |
+        PrefetchHint.SubtreeHasRuntimePrefetch)) !==
+    0
+  )
+}
+
+/**
+ * Same as `treeHasPartialPrefetching`, but reads the task's route from the
+ * cache. Called after the RouteTree phase completes, at which point the route
+ * entry is fulfilled.
+ */
+function routeHasPartialPrefetching(now: number, task: PrefetchTask): boolean {
+  const route = readRouteCacheEntry(now, task.key)
+  if (route === null || route.status !== EntryStatus.Fulfilled) {
+    return false
+  }
+  return treeHasPartialPrefetching(route.tree.prefetchHints)
 }
 
 function pingRoute(now: number, task: PrefetchTask): PrefetchTaskExitStatus {
@@ -2067,9 +2105,10 @@ export function subtreeHasSpeculativePrefetch(
   fetchStrategy: FetchStrategy,
   prefetchHints: number
 ): boolean {
-  if (!process.env.__NEXT_APP_SHELLS) {
-    // When App Shells is disabled, all prefetches implicitly include the
-    // speculative (non-shell) part of the target.
+  if (!treeHasPartialPrefetching(prefetchHints)) {
+    // Without Partial Prefetching, there's no separate App Shell phase, so
+    // every prefetch implicitly includes the speculative (non-shell) part of
+    // the target.
     return true
   }
 

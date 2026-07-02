@@ -176,7 +176,6 @@ async function requestHandler(
         authInterrupts: Boolean(nextConfig.experimental.authInterrupts),
         useCacheTimeout: nextConfig.experimental.useCacheTimeout,
         cachedNavigations: nextConfig.experimental.cachedNavigations ?? false,
-        appShells: nextConfig.experimental.appShells,
         clientTraceMetadata:
           nextConfig.experimental.clientTraceMetadata || ([] as any),
         clientParamParsingOrigins:

@@ -171,7 +171,6 @@ export interface RenderOptsPartial {
     authInterrupts: boolean
     useCacheTimeout: number
     cachedNavigations: boolean | 'allow-runtime'
-    appShells: ExperimentalConfig['appShells']
 
     /**
      * The maximum size (in bytes) of the postponed state body for PPR resume
