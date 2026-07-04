@@ -1,3 +1,4 @@
+import { INFINITE_CACHE } from '../../lib/constants'
 import { InvariantError } from '../../shared/lib/invariant-error'
 import { workAsyncStorage } from '../app-render/work-async-storage.external'
 import { workUnitAsyncStorage } from '../app-render/work-unit-async-storage.external'
@@ -147,30 +148,38 @@ export function cacheLife(profile: CacheLifeProfiles | CacheLife): void {
   }
 
   if (profile.revalidate !== undefined) {
-    // Track the explicit revalidate time.
+    // Track the explicit revalidate time. `Infinity` is a documented value,
+    // but it does not survive the JSON serialization boundaries that cache
+    // entry metadata crosses (resume data cache, cache handler backing
+    // stores), so it's tracked as `INFINITE_CACHE`, which has the same
+    // meaning.
+    const revalidate =
+      profile.revalidate === Infinity ? INFINITE_CACHE : profile.revalidate
     if (
       workUnitStore.explicitRevalidate === undefined ||
-      workUnitStore.explicitRevalidate > profile.revalidate
+      workUnitStore.explicitRevalidate > revalidate
     ) {
-      workUnitStore.explicitRevalidate = profile.revalidate
+      workUnitStore.explicitRevalidate = revalidate
     }
   }
   if (profile.expire !== undefined) {
     // Track the explicit expire time.
+    const expire = profile.expire === Infinity ? INFINITE_CACHE : profile.expire
     if (
       workUnitStore.explicitExpire === undefined ||
-      workUnitStore.explicitExpire > profile.expire
+      workUnitStore.explicitExpire > expire
     ) {
-      workUnitStore.explicitExpire = profile.expire
+      workUnitStore.explicitExpire = expire
     }
   }
   if (profile.stale !== undefined) {
     // Track the explicit stale time.
+    const stale = profile.stale === Infinity ? INFINITE_CACHE : profile.stale
     if (
       workUnitStore.explicitStale === undefined ||
-      workUnitStore.explicitStale > profile.stale
+      workUnitStore.explicitStale > stale
     ) {
-      workUnitStore.explicitStale = profile.stale
+      workUnitStore.explicitStale = stale
     }
   }
 }

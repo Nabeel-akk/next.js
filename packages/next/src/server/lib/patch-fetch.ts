@@ -55,7 +55,10 @@ export function validateRevalidate(
   try {
     let normalizedRevalidate: number | undefined = undefined
 
-    if (revalidateVal === false) {
+    if (revalidateVal === false || revalidateVal === Infinity) {
+      // `Infinity` does not survive JSON serialization (e.g. into the fetch
+      // cache or the prerender manifest), so it's normalized to
+      // `INFINITE_CACHE`, which has the same meaning.
       normalizedRevalidate = INFINITE_CACHE
     } else if (
       typeof revalidateVal === 'number' &&

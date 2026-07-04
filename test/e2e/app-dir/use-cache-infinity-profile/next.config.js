@@ -3,6 +3,9 @@
  */
 const nextConfig = {
   cacheComponents: true,
+  cacheHandlers: {
+    default: require.resolve('./handler.js'),
+  },
   cacheLife: {
     // `Infinity` is the documented value for "never revalidate/expire". The
     // resolved config crosses JSON serialization boundaries (build workers,
