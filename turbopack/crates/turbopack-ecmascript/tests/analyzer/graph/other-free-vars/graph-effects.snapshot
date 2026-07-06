@@ -144,6 +144,7 @@
                         #2,
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -290,6 +291,7 @@
                 FreeVar(
                     "Object",
                 ),
+                false,
             ),
         ],
         ast_path: [

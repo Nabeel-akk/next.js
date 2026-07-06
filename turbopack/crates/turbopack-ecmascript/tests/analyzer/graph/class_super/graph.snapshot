@@ -15,6 +15,7 @@
             original_value: None,
             reason: "unsupported expression",
             has_side_effects: true,
+            ignored: false,
         },
     ),
     (
@@ -23,6 +24,7 @@
             original_value: None,
             reason: "unsupported expression",
             has_side_effects: true,
+            ignored: false,
         },
     ),
     (

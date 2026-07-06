@@ -66,6 +66,7 @@
                         original_value: None,
                         reason: "unsupported expression",
                         has_side_effects: true,
+                        ignored: false,
                     },
                     Variable(
                         (
@@ -89,6 +90,7 @@
                         original_value: None,
                         reason: "unsupported expression",
                         has_side_effects: true,
+                        ignored: false,
                     },
                     Variable(
                         (
@@ -112,6 +114,7 @@
                         original_value: None,
                         reason: "unsupported expression",
                         has_side_effects: true,
+                        ignored: false,
                     },
                     Variable(
                         (
@@ -135,6 +138,7 @@
                         original_value: None,
                         reason: "unsupported expression",
                         has_side_effects: true,
+                        ignored: false,
                     },
                     Variable(
                         (
@@ -1584,6 +1588,7 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
             ],
             logical_property: None,
@@ -2867,6 +2872,7 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
             ],
             logical_property: None,
@@ -4178,6 +4184,7 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
             ],
             logical_property: None,
@@ -5479,6 +5486,7 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
             ],
             logical_property: None,
@@ -5583,6 +5591,7 @@
                     original_value: None,
                     reason: "updated with update expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Add(
                     3,
@@ -5630,6 +5639,7 @@
             original_value: None,
             reason: "unsupported expression",
             has_side_effects: true,
+            ignored: false,
         },
     ),
     (
@@ -5816,11 +5826,13 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Unknown {
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Variable(
                     (
@@ -5846,11 +5858,13 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Unknown {
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Variable(
                     (
@@ -5876,11 +5890,13 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Unknown {
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Variable(
                     (
@@ -5906,11 +5922,13 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Unknown {
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Variable(
                     (

@@ -478,6 +478,18 @@ impl ImportAttributes {
         static DEFAULT_VALUE: ImportAttributes = ImportAttributes::empty();
         &DEFAULT_VALUE
     }
+
+    /// Like [`empty_ref`](Self::empty_ref) but with `ignore` set, for linking a
+    /// value that carries a `turbopackIgnore` comment.
+    pub fn ignored_ref() -> &'static Self {
+        static IGNORED_VALUE: ImportAttributes = ImportAttributes {
+            ignore: true,
+            optional: false,
+            export_names: None,
+            chunking_type: None,
+        };
+        &IGNORED_VALUE
+    }
 }
 
 impl Default for ImportAttributes {

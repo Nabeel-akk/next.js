@@ -255,6 +255,22 @@ impl JsValue<'_> {
         }
     }
 
+    /// Returns true if this value was intentionally downgraded to unknown via a
+    /// `turbopackIgnore` comment (see [`JsValue::unknown_ignored`]). For
+    /// alternatives, all alternatives must be ignored, so that a partially
+    /// analyzable value is still traced.
+    pub fn is_ignored(&self) -> bool {
+        match self {
+            JsValue::Unknown { ignored, .. } => *ignored,
+            JsValue::Alternatives {
+                total_nodes: _,
+                values,
+                logical_property: _,
+            } => !values.is_empty() && values.iter().all(|x| x.is_ignored()),
+            _ => false,
+        }
+    }
+
     /// Checks if we know that the value is a string. Returns None if we
     /// don't know. Returns Some if we know if or if not the value is a string.
     pub fn is_string(&self) -> Option<bool> {

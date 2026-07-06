@@ -380,6 +380,7 @@
                         #4,
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -627,6 +628,7 @@
                         #4,
                     ),
                 ),
+                false,
             ),
             Value(
                 Object {
@@ -650,6 +652,7 @@
                     ],
                     mutable: true,
                 },
+                false,
             ),
         ],
         ast_path: [
@@ -884,6 +887,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1185,6 +1189,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1194,6 +1199,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1663,6 +1669,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1869,6 +1876,7 @@
                     ],
                     mutable: true,
                 },
+                false,
             ),
         ],
         ast_path: [
@@ -2077,6 +2085,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -2246,6 +2255,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -2432,7 +2442,9 @@
                     original_value: None,
                     reason: "assignment expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
+                false,
             ),
         ],
         ast_path: [
@@ -2526,6 +2538,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [

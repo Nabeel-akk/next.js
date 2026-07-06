@@ -113,13 +113,15 @@ impl<'a> JsValue<'a> {
                     original_value: _,
                     reason: l,
                     has_side_effects: ls,
+                    ignored: li,
                 },
                 JsValue::Unknown {
                     original_value: _,
                     reason: r,
                     has_side_effects: rs,
+                    ignored: ri,
                 },
-            ) => l == r && ls == rs,
+            ) => l == r && ls == rs && li == ri,
             (JsValue::Function(lc, _, l), JsValue::Function(rc, _, r)) => {
                 lc == rc && l.similar(r, depth - 1)
             }
@@ -233,9 +235,11 @@ impl<'a> JsValue<'a> {
                 original_value: _,
                 reason: v,
                 has_side_effects,
+                ignored,
             } => {
                 Hash::hash(v, state);
                 Hash::hash(has_side_effects, state);
+                Hash::hash(ignored, state);
             }
             JsValue::Function(_, _, v) => v.similar_hash(state, depth - 1),
             JsValue::Argument(i, v) => {

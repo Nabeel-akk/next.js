@@ -252,6 +252,7 @@
                     items: [],
                     mutable: true,
                 },
+                false,
             ),
         ],
         ast_path: [
@@ -594,6 +595,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Object {
@@ -633,6 +635,7 @@
                     ],
                     mutable: true,
                 },
+                false,
             ),
         ],
         ast_path: [
@@ -724,11 +727,13 @@
             original_value: None,
             reason: "unsupported expression",
             has_side_effects: true,
+            ignored: false,
         },
         prop: Unknown {
             original_value: None,
             reason: "private names in member expressions are not supported",
             has_side_effects: false,
+            ignored: false,
         },
         args: [
             Closure(
@@ -1082,6 +1087,7 @@
                                         ),
                                         [],
                                     ),
+                                    false,
                                 ),
                             ],
                             ast_path: [

@@ -997,7 +997,17 @@ impl<'a> Analyzer<'a, '_> {
                         )
                     } else {
                         arg.visit_with_ast_path(self, &mut ast_path);
-                        EffectArg::Value(value)
+                        // A `turbopackIgnore` comment on the argument itself (e.g.
+                        // `fs.readFileSync(path.join(/* turbopackIgnore: true */ ...)))`
+                        // opts the argument out of static analysis. Record it so that
+                        // linking downgrades the argument to an ignored-unknown when it
+                        // resolves to a well-known method, just like `require`.
+                        let ignore = self
+                            .eval_context
+                            .imports
+                            .get_attributes(arg.expr.span())
+                            .ignore;
+                        EffectArg::Value(value, ignore)
                     }
                 } else {
                     arg.visit_with_ast_path(self, &mut ast_path);

@@ -1550,17 +1550,21 @@ async fn handle_call<'a, G: Fn(BumpVec<'a, Effect<'a>>) + Send + Sync>(
     // Process all effects first so they happen exactly once.
     // If we end up modeling the behavior of the closures passed to any of these functions then we
     // will need to inline this into the appropriate spot just like Array.prototype.map support.
+    // Each arg is paired with whether it carried a `turbopackIgnore` comment, so
+    // that linking can downgrade it to an ignored-unknown when it resolves to a
+    // well-known method (mirroring how `require` is ignored).
     let unlinked_args = args
         .into_iter()
         .map(|effect_arg| match effect_arg {
-            EffectArg::Value(value) => value,
+            EffectArg::Value(value, ignore) => (value, ignore),
             EffectArg::Closure(value, block) => {
                 add_effects(BumpVec::from(BumpBox::into_inner(block).effects));
-                value
+                (value, false)
             }
-            EffectArg::Spread => {
-                JsValue::unknown_empty(true, rcstr!("spread is not supported yet"))
-            }
+            EffectArg::Spread => (
+                JsValue::unknown_empty(true, rcstr!("spread is not supported yet")),
+                false,
+            ),
         })
         .collect::<Vec<_>>();
 
@@ -1573,8 +1577,17 @@ async fn handle_call<'a, G: Fn(BumpVec<'a, Effect<'a>>) + Send + Sync>(
             .get_or_try_init(|| async {
                 unlinked_args
                     .iter()
-                    .map(|arg| arg.clone_in(state.arena.get_or_default()))
-                    .map(|arg| state.link_value(arg, ImportAttributes::empty_ref()))
+                    .map(|(arg, ignore)| (arg.clone_in(state.arena.get_or_default()), *ignore))
+                    .map(|(arg, ignore)| {
+                        state.link_value(
+                            arg,
+                            if ignore {
+                                ImportAttributes::ignored_ref()
+                            } else {
+                                ImportAttributes::empty_ref()
+                            },
+                        )
+                    })
                     .try_join()
                     .await
             })
@@ -1677,7 +1690,7 @@ async fn handle_dynamic_import<'a, G: Fn(BumpVec<'a, Effect<'a>>) + Send + Sync>
     let unlinked_args: Vec<JsValue> = args
         .into_iter()
         .map(|effect_arg| match effect_arg {
-            EffectArg::Value(value) => value,
+            EffectArg::Value(value, _) => value,
             EffectArg::Closure(value, block) => {
                 add_effects(BumpVec::from(BumpBox::into_inner(block).effects));
                 value
@@ -2324,6 +2337,11 @@ where
         WellKnownFunctionKind::FsReadMethod(name) if analysis.analyze_mode.is_tracing_assets() => {
             let args = linked_args().await?;
             if !args.is_empty() {
+                // The path argument opted out of analysis via a `turbopackIgnore`
+                // comment. Skip tracing entirely (no reference, no warning).
+                if args[0].is_ignored() {
+                    return Ok(());
+                }
                 let pat = js_value_to_pattern(&args[0]);
                 if !pat.has_constant_parts() {
                     let (args, hints) = explain_args(args);
@@ -2361,6 +2379,10 @@ where
         WellKnownFunctionKind::FsReadDir if analysis.analyze_mode.is_tracing_assets() => {
             let args = linked_args().await?;
             if !args.is_empty() {
+                // Opted out of analysis via a `turbopackIgnore` comment on the arg.
+                if args[0].is_ignored() {
+                    return Ok(());
+                }
                 let pat = js_value_to_pattern(&args[0]);
                 if !pat.has_constant_parts() {
                     let (args, hints) = explain_args(args);
@@ -2397,6 +2419,11 @@ where
         WellKnownFunctionKind::PathResolve(..) if analysis.analyze_mode.is_tracing_assets() => {
             let parent_path = origin.into_trait_ref().await?.origin_path().parent();
             let args = linked_args().await?;
+
+            // An arg opted out of analysis via a `turbopackIgnore` comment.
+            if args.iter().any(|a| a.is_ignored()) {
+                return Ok(());
+            }
 
             let linked_func_call = state
                 .link_value(
@@ -2456,6 +2483,10 @@ where
                 return Ok(());
             }
             let args = linked_args().await?;
+            // An arg opted out of analysis via a `turbopackIgnore` comment.
+            if args.iter().any(|a| a.is_ignored()) {
+                return Ok(());
+            }
             let linked_func_call = state
                 .link_value(
                     JsValue::call_from_parts(
@@ -3750,6 +3781,26 @@ async fn value_visitor_inner<'a>(
                 v.into_unknown(true, rcstr!("createRequire() non constant"))
             }
         }
+        // A call to a dynamic fs/path well-known method that carries a
+        // `turbopackIgnore` comment. Downgrade the whole call to an
+        // ignored-unknown (rather than evaluating the path pattern) so that
+        // enclosing tracing handlers skip it, just like `require`.
+        JsValue::Call(_, ref call)
+            if ignore
+                && matches!(
+                    call.callee(),
+                    JsValue::WellKnownFunction(
+                        WellKnownFunctionKind::PathJoin
+                            | WellKnownFunctionKind::PathResolve(_)
+                            | WellKnownFunctionKind::FsReadMethod(_)
+                            | WellKnownFunctionKind::FsReadDir
+                            | WellKnownFunctionKind::ChildProcessSpawnMethod(_)
+                            | WellKnownFunctionKind::ChildProcessFork,
+                    )
+                ) =>
+        {
+            JsValue::unknown_ignored(v, rcstr!("ignored well known function"))
+        }
         JsValue::New(_, ref call)
             if matches!(
                 call.callee(),
@@ -3782,7 +3833,7 @@ async fn value_visitor_inner<'a>(
         ) => {
             if ignore {
                 return Ok((
-                    JsValue::unknown(v, true, rcstr!("ignored well known function")),
+                    JsValue::unknown_ignored(v, rcstr!("ignored well known function")),
                     Modified::Yes,
                 ));
             } else {

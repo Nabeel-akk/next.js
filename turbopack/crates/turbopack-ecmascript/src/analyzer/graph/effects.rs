@@ -92,7 +92,10 @@ impl<'a> ConditionalKind<'a> {
 
 #[derive(Debug)]
 pub enum EffectArg<'a> {
-    Value(JsValue<'a>),
+    /// A plain argument value. The `bool` is `true` when the argument carries a
+    /// `turbopackIgnore` comment, so that linking can downgrade it to an
+    /// ignored-unknown when it resolves to a well-known method.
+    Value(JsValue<'a>, bool),
     Closure(JsValue<'a>, BumpBox<'a, EffectsBlock<'a>>),
     Spread,
 }
@@ -101,7 +104,7 @@ impl<'a> EffectArg<'a> {
     /// Normalizes all contained values.
     pub fn normalize(&mut self, arena: &'a Bump) {
         match self {
-            EffectArg::Value(value) => value.normalize(arena),
+            EffectArg::Value(value, _) => value.normalize(arena),
             EffectArg::Closure(value, effects) => {
                 value.normalize(arena);
                 for effect in effects.effects.iter_mut() {

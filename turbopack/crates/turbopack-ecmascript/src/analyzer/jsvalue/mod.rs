@@ -116,6 +116,12 @@ pub enum JsValue<'a> {
         original_value: Option<Arc<JsValue<'a>>>,
         reason: RcStr,
         has_side_effects: bool,
+        /// True when this value was intentionally downgraded to unknown because
+        /// the user opted out of analysis with a `turbopackIgnore` comment (as
+        /// opposed to being unknown because it could not be statically
+        /// determined). Consumers such as the dynamic-fs/path tracing handlers
+        /// use this to skip adding references (and warnings) entirely.
+        ignored: bool,
     },
 
     // NESTED VALUES
@@ -998,6 +1004,7 @@ impl<'a> JsValue<'a> {
             original_value: Some(value.into()),
             reason,
             has_side_effects: side_effects,
+            ignored: false,
         }
     }
 
@@ -1006,6 +1013,7 @@ impl<'a> JsValue<'a> {
             original_value: None,
             reason,
             has_side_effects: side_effects,
+            ignored: false,
         }
     }
 
@@ -1020,9 +1028,22 @@ impl<'a> JsValue<'a> {
                 original_value: Some(value.into()),
                 reason,
                 has_side_effects: side_effects,
+                ignored: false,
             }
         } else {
             value
+        }
+    }
+
+    /// Downgrades `value` to an unknown that is flagged as intentionally
+    /// `ignored` (opted out via a `turbopackIgnore` comment). See
+    /// [`JsValue::Unknown::ignored`] and [`JsValue::is_ignored`].
+    pub fn unknown_ignored(value: impl Into<Arc<JsValue<'a>>>, reason: RcStr) -> Self {
+        Self::Unknown {
+            original_value: Some(value.into()),
+            reason,
+            has_side_effects: true,
+            ignored: true,
         }
     }
 }
@@ -1302,10 +1323,12 @@ impl<'a> JsValue<'a> {
                 original_value,
                 reason,
                 has_side_effects,
+                ignored,
             } => JsValue::Unknown {
                 original_value: original_value.clone(),
                 reason: reason.clone(),
                 has_side_effects: *has_side_effects,
+                ignored: *ignored,
             },
             JsValue::Array {
                 total_nodes,

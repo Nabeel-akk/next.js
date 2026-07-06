@@ -1325,6 +1325,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Constant(
                     Num(
@@ -1463,6 +1464,7 @@
                         original_value: None,
                         reason: "unsupported expression",
                         has_side_effects: true,
+                        ignored: false,
                     },
                     Variable(
                         (
@@ -1514,6 +1516,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Variable(
                     (
@@ -1541,6 +1544,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Variable(
                     (
@@ -1568,6 +1572,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Variable(
                     (
@@ -1595,6 +1600,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Variable(
                     (

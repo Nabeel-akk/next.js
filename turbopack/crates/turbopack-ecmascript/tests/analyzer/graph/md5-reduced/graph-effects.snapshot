@@ -118,6 +118,7 @@
             original_value: None,
             reason: "unsupported expression",
             has_side_effects: true,
+            ignored: false,
         },
         ast_path: [
             Program(
@@ -180,6 +181,7 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
                 Constant(
                     Num(
@@ -392,6 +394,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -400,6 +403,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -408,6 +412,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -416,6 +421,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -433,6 +439,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -442,6 +449,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -451,6 +459,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -622,6 +631,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -630,6 +640,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -638,6 +649,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -646,6 +658,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -675,6 +688,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -684,6 +698,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -693,6 +708,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -864,6 +880,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -872,6 +889,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -880,6 +898,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -888,6 +907,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -917,6 +937,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -926,6 +947,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -935,6 +957,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1106,6 +1129,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1114,6 +1138,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1122,6 +1147,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1130,6 +1156,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -1159,6 +1186,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1168,6 +1196,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1177,6 +1206,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1348,6 +1378,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1356,6 +1387,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1364,6 +1396,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1372,6 +1405,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -1401,6 +1435,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1410,6 +1445,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1419,6 +1455,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1590,6 +1627,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1598,6 +1636,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1606,6 +1645,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1614,6 +1654,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -1643,6 +1684,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1652,6 +1694,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1661,6 +1704,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1832,6 +1876,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1840,6 +1885,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1848,6 +1894,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -1856,6 +1903,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -1885,6 +1933,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1894,6 +1943,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -1903,6 +1953,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -2074,6 +2125,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2082,6 +2134,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2090,6 +2143,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2098,6 +2152,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -2127,6 +2182,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -2136,6 +2192,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -2145,6 +2202,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -2316,6 +2374,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2324,6 +2383,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2332,6 +2392,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2340,6 +2401,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -2369,6 +2431,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -2378,6 +2441,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -2387,6 +2451,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -2558,6 +2623,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2566,6 +2632,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2574,6 +2641,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2582,6 +2650,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -2611,6 +2680,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -2620,6 +2690,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -2629,6 +2700,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -2800,6 +2872,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2808,6 +2881,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2816,6 +2890,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -2824,6 +2899,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -2853,6 +2929,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -2862,6 +2939,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -2871,6 +2949,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -3042,6 +3121,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3050,6 +3130,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3058,6 +3139,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3066,6 +3148,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -3095,6 +3178,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -3104,6 +3188,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -3113,6 +3198,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -3284,6 +3370,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3292,6 +3379,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3300,6 +3388,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3308,6 +3397,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -3337,6 +3427,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -3346,6 +3437,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -3355,6 +3447,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -3526,6 +3619,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3534,6 +3628,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3542,6 +3637,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3550,6 +3646,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -3579,6 +3676,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -3588,6 +3686,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -3597,6 +3696,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -3768,6 +3868,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3776,6 +3877,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3784,6 +3886,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -3792,6 +3895,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -3821,6 +3925,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -3830,6 +3935,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -3839,6 +3945,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -4010,6 +4117,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -4018,6 +4126,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -4026,6 +4135,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -4034,6 +4144,7 @@
                         #3,
                     ),
                 ),
+                false,
             ),
             Value(
                 Member(
@@ -4063,6 +4174,7 @@
                         ],
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -4072,6 +4184,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -4081,6 +4194,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -4449,6 +4563,7 @@
                         #5,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -4457,6 +4572,7 @@
                         #5,
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -4626,6 +4742,7 @@
                         #5,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -4634,6 +4751,7 @@
                         #5,
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -4735,6 +4853,7 @@
                         ),
                     ],
                 ),
+                false,
             ),
             Value(
                 Call(
@@ -4757,6 +4876,7 @@
                         ),
                     ],
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -4875,6 +4995,7 @@
                         ),
                     ],
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -4883,6 +5004,7 @@
                         #5,
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -5004,6 +5126,7 @@
                         ),
                     ],
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -5012,6 +5135,7 @@
                         #5,
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -5099,7 +5223,9 @@
                     original_value: None,
                     reason: "unsupported expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
+                false,
             ),
             Value(
                 Variable(
@@ -5108,6 +5234,7 @@
                         #6,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -5116,6 +5243,7 @@
                         #6,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -5124,6 +5252,7 @@
                         #6,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -5132,6 +5261,7 @@
                         #6,
                     ),
                 ),
+                false,
             ),
             Value(
                 Variable(
@@ -5140,6 +5270,7 @@
                         #6,
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [

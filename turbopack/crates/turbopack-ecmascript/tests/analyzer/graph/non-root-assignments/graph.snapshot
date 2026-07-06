@@ -15,6 +15,7 @@
             original_value: None,
             reason: "unsupported expression",
             has_side_effects: true,
+            ignored: false,
         },
     ),
     (
@@ -47,6 +48,7 @@
                         original_value: None,
                         reason: "unsupported object part",
                         has_side_effects: true,
+                        ignored: false,
                     },
                 ),
                 Spread(
@@ -54,6 +56,7 @@
                         original_value: None,
                         reason: "unsupported object part",
                         has_side_effects: true,
+                        ignored: false,
                     },
                 ),
             ],
@@ -99,6 +102,7 @@
                     original_value: None,
                     reason: "updated with update expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
             ],
             logical_property: None,
@@ -163,6 +167,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Constant(
                     Num(
@@ -257,6 +262,7 @@
             ),
             reason: "pattern without value",
             has_side_effects: false,
+            ignored: false,
         },
     ),
 ]

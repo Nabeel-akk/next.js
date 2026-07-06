@@ -133,6 +133,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 MemberCall(
                     7,
@@ -309,6 +310,7 @@
             ),
             reason: "pattern without value",
             has_side_effects: false,
+            ignored: false,
         },
     ),
     (
@@ -324,6 +326,7 @@
             ),
             reason: "pattern without value",
             has_side_effects: false,
+            ignored: false,
         },
     ),
     (
@@ -797,6 +800,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Member(
                     3,
@@ -983,6 +987,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Constant(
                     Str(

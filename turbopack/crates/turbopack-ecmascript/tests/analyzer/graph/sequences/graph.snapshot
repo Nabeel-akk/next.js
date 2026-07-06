@@ -15,6 +15,7 @@
                     original_value: None,
                     reason: "updated with update expression",
                     has_side_effects: true,
+                    ignored: false,
                 },
             ],
             logical_property: None,
@@ -34,6 +35,7 @@
             ),
             reason: "sequence with side effects",
             has_side_effects: true,
+            ignored: false,
         },
     ),
 ]

@@ -55,6 +55,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -328,6 +329,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -380,6 +382,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -596,6 +599,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -648,6 +652,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -795,6 +800,7 @@
                 FreeVar(
                     "__filename",
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -847,6 +853,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1064,6 +1071,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1116,6 +1124,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
         ],
         ast_path: [

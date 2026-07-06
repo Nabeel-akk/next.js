@@ -11,6 +11,7 @@
                         original_value: None,
                         reason: "spread in function calls is not supported",
                         has_side_effects: true,
+                        ignored: false,
                     },
                     Constant(
                         Undefined,
@@ -40,6 +41,7 @@
             ),
             reason: "pattern without value",
             has_side_effects: false,
+            ignored: false,
         },
     ),
     (
@@ -67,6 +69,7 @@
                             original_value: None,
                             reason: "unsupported expression",
                             has_side_effects: true,
+                            ignored: false,
                         },
                     ],
                 ),
@@ -147,6 +150,7 @@
             ),
             reason: "pattern without value",
             has_side_effects: false,
+            ignored: false,
         },
     ),
     (

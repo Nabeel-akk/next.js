@@ -18,9 +18,7 @@ pub fn early_replace_builtin(value: &mut JsValue<'_>) -> Modified {
             match callee {
                 // We don't know what the callee is, so we can early return
                 &mut JsValue::Unknown {
-                    original_value: _,
-                    reason: _,
-                    has_side_effects,
+                    has_side_effects, ..
                 } => {
                     let has_side_effects = has_side_effects || args_have_side_effects();
                     value.make_unknown(has_side_effects, rcstr!("unknown callee"));
@@ -51,9 +49,7 @@ pub fn early_replace_builtin(value: &mut JsValue<'_>) -> Modified {
             match obj {
                 // We don't know what the callee is, so we can early return
                 &mut JsValue::Unknown {
-                    original_value: _,
-                    reason: _,
-                    has_side_effects,
+                    has_side_effects, ..
                 } => {
                     let side_effects =
                         has_side_effects || prop.has_side_effects() || args_have_side_effects();
@@ -64,9 +60,7 @@ pub fn early_replace_builtin(value: &mut JsValue<'_>) -> Modified {
                 _ => match prop {
                     // We don't know what the property is, so we can early return
                     &mut JsValue::Unknown {
-                        original_value: _,
-                        reason: _,
-                        has_side_effects,
+                        has_side_effects, ..
                     } => {
                         let side_effects = has_side_effects || args_have_side_effects();
                         value.make_unknown(side_effects, rcstr!("unknown callee property"));

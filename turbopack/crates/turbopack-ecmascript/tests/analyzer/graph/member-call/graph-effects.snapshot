@@ -117,6 +117,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -126,6 +127,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -135,6 +137,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Array {
@@ -164,6 +167,7 @@
                     ],
                     mutable: true,
                 },
+                false,
             ),
             Value(
                 Concat(
@@ -184,6 +188,7 @@
                         ),
                     ],
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -527,6 +532,7 @@
                     ],
                     mutable: true,
                 },
+                false,
             ),
         ],
         ast_path: [
@@ -836,6 +842,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -845,6 +852,7 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 Constant(
@@ -854,11 +862,13 @@
                         ),
                     ),
                 ),
+                false,
             ),
             Value(
                 FreeVar(
                     "unknown",
                 ),
+                false,
             ),
         ],
         ast_path: [
@@ -1030,6 +1040,7 @@
                     ],
                     mutable: true,
                 },
+                false,
             ),
         ],
         ast_path: [

@@ -12,6 +12,7 @@
             ),
             reason: "pattern without value",
             has_side_effects: false,
+            ignored: false,
         },
     ),
     (
@@ -30,6 +31,7 @@
                     ),
                     reason: "pattern without value",
                     has_side_effects: false,
+                    ignored: false,
                 },
                 Call(
                     3,

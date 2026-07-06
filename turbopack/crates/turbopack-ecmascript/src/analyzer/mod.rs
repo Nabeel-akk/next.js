@@ -509,13 +509,17 @@ mod tests {
                     let mut new_args = Vec::with_capacity(args.len());
                     for arg in args {
                         match arg {
-                            EffectArg::Value(v) => {
+                            EffectArg::Value(v, ignore) => {
                                 new_args.push(
                                     resolve(
                                         arena,
                                         var_graph,
                                         v,
-                                        ImportAttributes::empty_ref(),
+                                        if ignore {
+                                            ImportAttributes::ignored_ref()
+                                        } else {
+                                            ImportAttributes::empty_ref()
+                                        },
                                         var_cache,
                                     )
                                     .await

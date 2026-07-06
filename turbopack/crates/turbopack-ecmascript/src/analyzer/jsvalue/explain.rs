@@ -367,6 +367,7 @@ impl JsValue<'_> {
                 original_value: inner,
                 reason: explainer,
                 has_side_effects,
+                ignored: _,
             } => {
                 let has_side_effects = *has_side_effects;
                 if unknown_depth == 0 || explainer.is_empty() {
