@@ -204,7 +204,8 @@ export abstract class RouteModule<
 
   private loadManifests(
     srcPage: string,
-    projectDir?: string
+    projectDir?: string,
+    rscOnly?: boolean
   ): {
     buildId: string
     buildManifest: BuildManifest
@@ -351,7 +352,13 @@ export abstract class RouteModule<
               projectDir,
               useEval: true,
               handleMissing: true,
-              manifest: `server/app${srcPage.replace(/%5F/g, '_') + '_' + CLIENT_REFERENCE_MANIFEST}.js`,
+              // In dev with Turbopack, an RSC-only soft navigation compiles the
+              // SSR-free `rsc_endpoint`, whose client-reference manifest is
+              // emitted to a separate `.rsc` path. Read the variant matching
+              // the endpoint that was built for this request.
+              manifest: `server/app${
+                srcPage.replace(/%5F/g, '_') + '_' + CLIENT_REFERENCE_MANIFEST
+              }${rscOnly && this.isDev && process.env.TURBOPACK ? '.rsc' : ''}.js`,
               shouldCache: !this.isDev,
             })
           : undefined,
@@ -676,7 +683,10 @@ export abstract class RouteModule<
       // before the userland route handler runs.
       await ensureInstrumentationRegistered(absoluteProjectDir, this.distDir)
     }
-    const manifests = this.loadManifests(srcPage, absoluteProjectDir)
+    const rscOnly =
+      !!getRequestMeta(req, 'isRSCRequest') &&
+      !getRequestMeta(req, 'isPrefetchRSCRequest')
+    const manifests = this.loadManifests(srcPage, absoluteProjectDir, rscOnly)
     const { routesManifest, prerenderManifest, serverFilesManifest } = manifests
 
     const { basePath, i18n, rewrites } = routesManifest

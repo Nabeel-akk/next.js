@@ -100,6 +100,7 @@ pub struct ClientReferenceManifest {
     pub client_references_chunks: ResolvedVc<ClientReferencesChunks>,
     pub client_chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
     pub ssr_chunking_context: Option<ResolvedVc<Box<dyn ChunkingContext>>>,
+    pub rsc_chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
     pub async_module_info: ResolvedVc<AsyncModulesInfo>,
     pub next_config: ResolvedVc<NextConfig>,
     pub runtime: NextRuntime,
@@ -121,10 +122,18 @@ impl OutputAsset for ClientReferenceManifest {
     #[turbo_tasks::function]
     async fn path(&self) -> Result<Vc<FileSystemPath>> {
         let normalized_manifest_entry = self.entry_name.replace("%5F", "_");
+        // The SSR-free `rsc_endpoint` variant (no `ssr_chunking_context`) writes to a
+        // separate `.rsc` path so it never overwrites the HTML variant's manifest, which
+        // carries the `ssrModuleMapping` that document/SSR renders depend on.
+        let variant = if self.ssr_chunking_context.is_none() {
+            ".rsc"
+        } else {
+            ""
+        };
         Ok(self
             .node_root
             .join(&format!(
-                "server/app{normalized_manifest_entry}_client-reference-manifest.js",
+                "server/app{normalized_manifest_entry}_client-reference-manifest{variant}.js",
             ))?
             .cell())
     }
@@ -156,6 +165,7 @@ async fn build_manifest(
         client_references_chunks,
         client_chunking_context,
         ssr_chunking_context,
+        rsc_chunking_context,
         async_module_info,
         next_config,
         runtime,
@@ -304,15 +314,12 @@ async fn build_manifest(
                 (Vec::new(), false)
             };
 
+            let mut ssr_is_async = false;
             if let Some(ssr_chunking_context) = *ssr_chunking_context {
                 let ssr_module = client_reference_module_ref.ssr_module;
                 let ssr_chunk_item_id = ssr_module.chunk_item_id(*ssr_chunking_context).await?;
 
-                let rsc_chunk_item_id = client_reference_module
-                    .chunk_item_id(*ssr_chunking_context)
-                    .await?;
-
-                let (ssr_chunks_paths, ssr_is_async) = if *runtime == NextRuntime::Edge {
+                let (ssr_chunks_paths, ssr_module_is_async) = if *runtime == NextRuntime::Edge {
                     // the chunks get added to the middleware-manifest.json instead
                     // of this file because the
                     // edge runtime doesn't support dynamically
@@ -344,26 +351,7 @@ async fn build_manifest(
                 } else {
                     (Vec::new(), false)
                 };
-
-                let rsc_is_async = if *runtime == NextRuntime::Edge {
-                    false
-                } else {
-                    async_modules.contains(&ResolvedVc::upcast(client_reference_module))
-                };
-
-                entry_manifest.client_modules.module_exports.insert(
-                    get_client_reference_module_key(&server_path, "*"),
-                    ManifestNodeEntry {
-                        name: rcstr!("*"),
-                        id: (&client_chunk_item_id).into(),
-                        chunks: client_chunks_paths,
-                        // This should of course be client_is_async, but SSR can become
-                        // async due to ESM externals, and
-                        // the ssr_manifest_node is currently ignored
-                        // by React.
-                        r#async: client_is_async || ssr_is_async,
-                    },
-                );
+                ssr_is_async = ssr_module_is_async;
 
                 let mut ssr_manifest_node = ManifestNode::default();
                 ssr_manifest_node.module_exports.insert(
@@ -372,19 +360,8 @@ async fn build_manifest(
                         name: rcstr!("*"),
                         id: (&ssr_chunk_item_id).into(),
                         chunks: ssr_chunks_paths,
-                        // See above
+                        // See below
                         r#async: client_is_async || ssr_is_async,
-                    },
-                );
-
-                let mut rsc_manifest_node = ManifestNode::default();
-                rsc_manifest_node.module_exports.insert(
-                    rcstr!("*"),
-                    ManifestNodeEntry {
-                        name: rcstr!("*"),
-                        id: (&rsc_chunk_item_id).into(),
-                        chunks: vec![],
-                        r#async: rsc_is_async,
                     },
                 );
 
@@ -393,20 +370,62 @@ async fn build_manifest(
                         entry_manifest
                             .ssr_module_mapping
                             .insert((&client_chunk_item_id).into(), ssr_manifest_node);
-                        entry_manifest
-                            .rsc_module_mapping
-                            .insert((&client_chunk_item_id).into(), rsc_manifest_node);
                     }
                     NextRuntime::Edge => {
                         entry_manifest
                             .edge_ssr_module_mapping
                             .insert((&client_chunk_item_id).into(), ssr_manifest_node);
-                        entry_manifest
-                            .edge_rsc_module_mapping
-                            .insert((&client_chunk_item_id).into(), rsc_manifest_node);
                     }
                 }
             }
+
+            let rsc_chunk_item_id = client_reference_module
+                .chunk_item_id(**rsc_chunking_context)
+                .await?;
+
+            let rsc_is_async = if *runtime == NextRuntime::Edge {
+                false
+            } else {
+                async_modules.contains(&ResolvedVc::upcast(client_reference_module))
+            };
+
+            let mut rsc_manifest_node = ManifestNode::default();
+            rsc_manifest_node.module_exports.insert(
+                rcstr!("*"),
+                ManifestNodeEntry {
+                    name: rcstr!("*"),
+                    id: (&rsc_chunk_item_id).into(),
+                    chunks: vec![],
+                    r#async: rsc_is_async,
+                },
+            );
+
+            match runtime {
+                NextRuntime::NodeJs => {
+                    entry_manifest
+                        .rsc_module_mapping
+                        .insert((&client_chunk_item_id).into(), rsc_manifest_node);
+                }
+                NextRuntime::Edge => {
+                    entry_manifest
+                        .edge_rsc_module_mapping
+                        .insert((&client_chunk_item_id).into(), rsc_manifest_node);
+                }
+            }
+
+            entry_manifest.client_modules.module_exports.insert(
+                get_client_reference_module_key(&server_path, "*"),
+                ManifestNodeEntry {
+                    name: rcstr!("*"),
+                    id: (&client_chunk_item_id).into(),
+                    chunks: client_chunks_paths,
+                    // This should of course be client_is_async, but SSR can become
+                    // async due to ESM externals, and
+                    // the ssr_manifest_node is currently ignored
+                    // by React.
+                    r#async: client_is_async || ssr_is_async,
+                },
+            );
         }
 
         // per layout segment chunks need to be emitted into the manifest too

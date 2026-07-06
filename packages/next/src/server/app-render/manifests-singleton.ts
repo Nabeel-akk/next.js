@@ -271,6 +271,44 @@ export function selectWorkerForForwarding(
   return denormalizeWorkerPageName(Object.keys(workers)[0])
 }
 
+/**
+ * Merges a freshly-loaded client reference manifest for a route over the one
+ * already registered for it. Every field takes the incoming (latest-compiled)
+ * value so HMR stays correct — except `ssrModuleMapping`/`edgeSSRModuleMapping`,
+ * which the SSR-free `rsc_endpoint` (used for dev soft navigations) emits empty.
+ * If the incoming manifest has no SSR mappings but a previous full
+ * (`htmlEndpoint`) manifest did, we keep the existing ones so that a later HTML
+ * SSR render that references this route's client components cross-page (via
+ * React's dev-only I/O tracking, see `createMappingProxy` above) can still
+ * resolve them. The HTML path re-registers a fully consistent manifest before
+ * rendering its own route, so a preserved mapping is never used against
+ * mismatched modules for that route itself.
+ */
+function mergeClientReferenceManifest(
+  existing: DeepReadonly<ClientReferenceManifest>,
+  incoming: DeepReadonly<ClientReferenceManifest>
+): DeepReadonly<ClientReferenceManifest> {
+  const preferNonEmpty = <T extends Record<string, unknown>>(
+    incomingValue: T,
+    existingValue: T
+  ): T =>
+    incomingValue && Object.keys(incomingValue).length > 0
+      ? incomingValue
+      : existingValue
+
+  return {
+    ...incoming,
+    ssrModuleMapping: preferNonEmpty(
+      incoming.ssrModuleMapping,
+      existing.ssrModuleMapping
+    ),
+    edgeSSRModuleMapping: preferNonEmpty(
+      incoming.edgeSSRModuleMapping,
+      existing.edgeSSRModuleMapping
+    ),
+  }
+}
+
 export function setManifestsSingleton({
   page,
   clientReferenceManifest,
@@ -291,9 +329,15 @@ export function setManifestsSingleton({
   }
 
   if (existingSingleton) {
+    const route = normalizeAppPath(page)
+    const existing =
+      existingSingleton.clientReferenceManifestsPerRoute.get(route)
+
     existingSingleton.clientReferenceManifestsPerRoute.set(
-      normalizeAppPath(page),
-      clientReferenceManifest
+      route,
+      existing
+        ? mergeClientReferenceManifest(existing, clientReferenceManifest)
+        : clientReferenceManifest
     )
 
     existingSingleton.serverActionsManifest = serverActionsManifest

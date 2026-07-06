@@ -1110,6 +1110,13 @@ export default class NextNodeServer extends BaseServer<
 
       const options: MatchOptions = {
         i18n: this.i18nProvider?.fromRequest(req, pathname),
+        // Only actual navigations skip SSR — never prefetches. A prefetched
+        // route can be referenced cross-page by another route's dev HTML render
+        // (React's dev-only I/O tracking), which needs its `ssrModuleMapping`,
+        // so prefetches keep compiling the full `htmlEndpoint`.
+        rscOnly:
+          !!getRequestMeta(req, 'isRSCRequest') &&
+          !getRequestMeta(req, 'isPrefetchRSCRequest'),
       }
       const match = await this.matchers.match(pathname, options)
 

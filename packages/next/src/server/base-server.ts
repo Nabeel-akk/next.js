@@ -2644,6 +2644,10 @@ export default abstract class Server<
 
     const options: MatchOptions = {
       i18n: this.i18nProvider?.fromRequest(req, pathname),
+      // Only actual navigations skip SSR — never prefetches (see next-server).
+      rscOnly:
+        !!getRequestMeta(ctx.req, 'isRSCRequest') &&
+        !getRequestMeta(ctx.req, 'isPrefetchRSCRequest'),
     }
 
     const existingMatch = getRequestMeta(ctx.req, 'match')
