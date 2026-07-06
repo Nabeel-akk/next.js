@@ -126,6 +126,22 @@ export type RouterTransitionStartEvent = RouterTransitionEvent & {
 export type RouterTransitionCommitEvent = RouterTransitionEvent & {
   /** The route that was committed. */
   to: RouterTransitionRoute
+  /**
+   * Whether the navigation was instant: at the moment it was dispatched, the
+   * router had something in its caches to render for the whole destination —
+   * the route tree, plus bytes for every fresh segment. "Something to
+   * render" is deliberately generous: a partial shell counts even when it is
+   * entirely a dynamic hole, so `instant` attributes cache coverage, not
+   * paint time. `false` when the navigation needed the network before it had
+   * anything to render: the route was not prefetched (the commit itself
+   * blocked on the fetch), a segment's prefetch was still pending, evicted,
+   * or never made, or the commit rode a refresh/retry-derived tree. Read it
+   * together with the start→commit latency: `false` marks the navigations
+   * prefetching could have made faster, while a slow `true` commit is
+   * waiting on streaming runtime content or client-side rendering — costs
+   * prefetching cannot remove.
+   */
+  instant: boolean
 }
 
 export type RouterTransitionAbortEvent = RouterTransitionEvent & {

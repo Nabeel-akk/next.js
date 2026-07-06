@@ -106,6 +106,9 @@ export function refreshDynamicData(
     // mismatch occurs, the retry handler will traverse the known route tree
     // to find and mark the entry.
     null,
-    signal
+    signal,
+    // Refreshes re-derive the current destination; the transition (if any)
+    // is retargeted at the settle chokepoint, not threaded here.
+    null
   )
 }

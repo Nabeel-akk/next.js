@@ -71,6 +71,9 @@ export function serverPatchReducer(
     // marked as having a dynamic rewrite when the mismatch was detected.
     null,
     // Not an HMR refresh, so there's no request generation to cancel.
-    undefined
+    undefined,
+    // Retries re-derive the current destination; the transition (if any) is
+    // retargeted at the settle chokepoint, not threaded here.
+    null
   )
 }

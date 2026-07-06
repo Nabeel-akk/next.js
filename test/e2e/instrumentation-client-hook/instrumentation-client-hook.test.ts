@@ -225,9 +225,15 @@ describe('Instrumentation Client Hook', () => {
         )
         expect(Object.keys(commit.event).sort()).toEqual([
           'id',
+          'instant',
           'timestamp',
           'to',
         ])
+        // The value is asserted in the dedicated instant tests below: this
+        // first click races the link's own prefetch (clicking before it
+        // lands is a genuine non-instant navigation), so only the payload
+        // shape is deterministic here.
+        expect(typeof commit.event.instant).toBe('boolean')
         expect(commit.event.to.routes).toEqual([
           { template: '/some-page', params: [] },
         ])
@@ -275,6 +281,74 @@ describe('Instrumentation Client Hook', () => {
         'commit',
       ])
       expect(events.at(-2).event.from.canonicalUrl).toBe('/?shallow=1')
+    })
+
+    it('reports an instant navigation when restoring a cached route', async () => {
+      const browser = await next.browser('/')
+
+      await browser.elementByCss('a[href="/some-page"]').click()
+      await browser.elementById('some-page')
+      await browser.back()
+      await browser.elementById('home')
+      // Going forward restores /some-page from the BFCache, so there is a fully
+      // rendered shell to navigate into.
+      await browser.forward()
+      await browser.elementById('some-page')
+
+      await retry(async () => {
+        const commit = (await getTransitionEvents(browser))
+          .filter((e) => e.phase === 'commit' && e.url === '/some-page')
+          .at(-1)
+        expect(commit?.event.instant).toBe(true)
+      })
+    })
+
+    it('reports a non-instant navigation when nothing is prefetched for the route', async () => {
+      const browser = await next.browser('/')
+
+      // Without a prefetch the destination state is produced asynchronously
+      // (the router blocks on the dynamic fetch), so the cache could not
+      // serve the navigation.
+      await browser.elementById('push-no-prefetch').click()
+      await browser.elementById('no-prefetch')
+
+      await retry(async () => {
+        const commit = (await getTransitionEvents(browser)).find(
+          (e) => e.phase === 'commit' && e.url === '/no-prefetch'
+        )
+        expect(commit?.event.to.renderedPathname).toBe('/no-prefetch')
+        expect(commit?.event.instant).toBe(false)
+      })
+    })
+
+    it('reports an instant commit for a hash-only navigation', async () => {
+      const browser = await next.browser('/')
+
+      await browser.elementById('push-hash').click()
+      await retry(async () => {
+        const events = await getTransitionEvents(browser)
+        expect(events.some((e) => e.phase === 'commit')).toBe(true)
+      })
+      const commit = lastCommit(await getTransitionEvents(browser))
+      // The instant field reports whether the cache could serve the
+      // navigation, and the two modes genuinely differ here. In production
+      // the route tree is known locally and the page UI is reused as-is —
+      // instant. (Reused segments never run the per-segment cache reads,
+      // which is exactly why instant must be the default and only navigations
+      // the cache could not serve are marked.) In development nothing is ever
+      // prefetched, so even a hash-only navigation first consults the server
+      // for the route tree before committing — accurately not instant.
+      expect(commit.event.instant).toBe(isNextDev ? false : true)
+
+      // Traversing back across the hash boundary reuses the tree the same
+      // way — instant in both modes (no fetch ever happens).
+      await browser.back()
+      await retry(async () => {
+        const traverseCommit = (await getTransitionEvents(browser)).find(
+          (e) => e.phase === 'commit' && e.navigateType === 'traverse'
+        )
+        expect(traverseCommit?.event.instant).toBe(true)
+      })
     })
 
     it('describes routes across group, dynamic, catch-all, rewritten, hash, query, and intercepted URLs', async () => {
@@ -602,6 +676,11 @@ describe('Instrumentation Client Hook', () => {
       expect(commits).toHaveLength(1)
       expect(commits[0].event.id).toBe(starts[0].event.id)
       expect(commits[0].event.to.renderedPathname).toBe('/no-prefetch')
+      // Not instant twice over: the route wasn't prefetched (the push blocked
+      // on the dynamic fetch), and the committed tree was derived by the
+      // refresh from a second server response (retargetRouterTransition also
+      // marks retargeted transitions as not instant).
+      expect(commits[0].event.instant).toBe(false)
       expect(events.filter((e) => e.phase === 'abort')).toHaveLength(0)
 
       // The transition is settled, not starved: before the fix, its entry

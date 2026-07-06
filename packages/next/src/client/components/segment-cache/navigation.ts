@@ -40,6 +40,11 @@ import { createCacheKey, type NormalizedSearch } from './cache-key'
 import { schedulePrefetchTask } from './scheduler'
 import { PrefetchPriority, FetchStrategy } from './types'
 import { getLinkForCurrentNavigation } from '../links'
+import {
+  markRouterTransitionAsNotInstant,
+  type PendingRouterTransition,
+} from '../router-transition'
+import { isThenable } from '../../../shared/lib/is-thenable'
 import type { PageVaryPath } from './vary-path'
 import type { AppRouterState } from '../router-reducer/router-reducer-types'
 import { ScrollBehavior } from '../router-reducer/router-reducer-types'
@@ -66,7 +71,15 @@ export function navigate(
   nextUrl: string | null,
   freshnessPolicy: FreshnessPolicy,
   scrollBehavior: ScrollBehavior,
-  navigateType: 'push' | 'replace'
+  navigateType: 'push' | 'replace',
+  // INSTRUMENTATION ONLY — the pending transition created when this
+  // navigation started (`null` when untracked, e.g. a server-action
+  // redirect or gesture). Unlike lifecycle settlement, which lives at the
+  // action queue's settle chokepoint, the `instant` marks need
+  // navigation-time data: whether the destination state is produced
+  // synchronously, and whether the segment walk was served from cache — so
+  // the transition is threaded to those sites.
+  instrumentationTransition: PendingRouterTransition | null
 ): AppRouterState | Promise<AppRouterState> {
   let navigationLock: NavigationLock = null
 
@@ -92,12 +105,13 @@ export function navigate(
         freshnessPolicy,
         scrollBehavior,
         navigateType,
-        navigationLock
+        navigationLock,
+        instrumentationTransition
       )
     }
   }
 
-  return navigateImpl(
+  const result = navigateImpl(
     state,
     url,
     currentUrl,
@@ -108,8 +122,19 @@ export function navigate(
     freshnessPolicy,
     scrollBehavior,
     navigateType,
-    navigationLock
+    navigationLock,
+    instrumentationTransition
   )
+  // Instrumentation: if the destination state could not be produced
+  // synchronously, the navigation waited on the network before that state
+  // could even exist — today the only async path is an unprefetched route
+  // tree, which blocks on the dynamic fetch. Deriving the mark from the
+  // asynchrony itself keeps the tracking exhaustive by construction: a
+  // future async path in navigateImpl is marked automatically.
+  if (isThenable(result)) {
+    markRouterTransitionAsNotInstant(instrumentationTransition)
+  }
+  return result
 }
 
 function navigateImpl(
@@ -123,7 +148,8 @@ function navigateImpl(
   freshnessPolicy: FreshnessPolicy,
   scrollBehavior: ScrollBehavior,
   navigateType: 'push' | 'replace',
-  navigationLock: NavigationLock
+  navigationLock: NavigationLock,
+  instrumentationTransition: PendingRouterTransition | null
 ): AppRouterState | Promise<AppRouterState> {
   const now = Date.now()
   const href = url.href
@@ -145,7 +171,8 @@ function navigateImpl(
       scrollBehavior,
       navigateType,
       route,
-      navigationLock
+      navigationLock,
+      instrumentationTransition
     )
   }
 
@@ -182,7 +209,8 @@ function navigateImpl(
           scrollBehavior,
           navigateType,
           optimisticRoute,
-          navigationLock
+          navigationLock,
+          instrumentationTransition
         )
       }
     }
@@ -205,7 +233,8 @@ function navigateImpl(
     freshnessPolicy,
     scrollBehavior,
     navigateType,
-    navigationLock
+    navigationLock,
+    instrumentationTransition
   ).catch(() => {
     // If the navigation fails, return the current state. (Settling the action
     // with the unchanged state untracks the instrumentation transition, so it
@@ -242,7 +271,11 @@ export function navigateToKnownRoute(
   // dynamic rewrite by traversing the known route tree (see
   // dispatchRetryDueToTreeMismatch).
   routeCacheEntry: FulfilledRouteCacheEntry | null,
-  signal: AbortSignal | undefined
+  signal: AbortSignal | undefined,
+  // INSTRUMENTATION ONLY — threaded into the segment walk's accumulation so
+  // a fresh segment the cache could not serve marks the transition as not
+  // instant. `null` for untracked callers (server actions, retries).
+  instrumentationTransition: PendingRouterTransition | null
 ): AppRouterState {
   // A version of navigate() that accepts the target route tree as an argument
   // rather than reading it from the prefetch cache.
@@ -309,6 +342,7 @@ export function navigateToKnownRoute(
   const accumulation: NavigationRequestAccumulation = {
     separateRefreshUrls: null,
     scrollRef: null,
+    instrumentationTransition,
   }
   // We special case navigations to the exact same URL as the current location.
   // It's a common UI pattern for apps to refresh when you click a link to the
@@ -392,7 +426,8 @@ function navigateUsingPrefetchedRouteTree(
   scrollBehavior: ScrollBehavior,
   navigateType: 'push' | 'replace',
   route: FulfilledRouteCacheEntry,
-  navigationLock: NavigationLock
+  navigationLock: NavigationLock,
+  instrumentationTransition: PendingRouterTransition | null
 ): AppRouterState {
   const routeTree = route.tree
   const canonicalUrl = route.canonicalUrl + url.hash
@@ -423,7 +458,8 @@ function navigateUsingPrefetchedRouteTree(
     null,
     route,
     // Not an HMR refresh, so there's no request generation to cancel.
-    undefined
+    undefined,
+    instrumentationTransition
   )
 }
 
@@ -451,7 +487,8 @@ async function navigateToUnknownRoute(
   freshnessPolicy: FreshnessPolicy,
   scrollBehavior: ScrollBehavior,
   navigateType: 'push' | 'replace',
-  navigationLock: NavigationLock
+  navigationLock: NavigationLock,
+  instrumentationTransition: PendingRouterTransition | null
 ): Promise<AppRouterState> {
   // Runs when a navigation happens but there's no cached prefetch we can use.
   // Don't bother to wait for a prefetch response; go straight to a full
@@ -642,7 +679,8 @@ async function navigateToUnknownRoute(
     // entry as having a dynamic rewrite.
     null,
     // Not an HMR refresh, so there's no request generation to cancel.
-    undefined
+    undefined,
+    instrumentationTransition
   )
 }
 
@@ -1075,7 +1113,8 @@ async function ensurePrefetchThenNavigate(
   freshnessPolicy: FreshnessPolicy,
   scrollBehavior: ScrollBehavior,
   navigateType: 'push' | 'replace',
-  navigationLock: NavigationLock
+  navigationLock: NavigationLock,
+  instrumentationTransition: PendingRouterTransition | null
 ): Promise<AppRouterState> {
   const link = getLinkForCurrentNavigation()
   const fetchStrategy = link !== null ? link.fetchStrategy : FetchStrategy.PPR
@@ -1104,7 +1143,7 @@ async function ensurePrefetchThenNavigate(
 
   // Prefetch is complete. Proceed with the normal navigation flow, which
   // will now find the route in the cache.
-  const result = await navigateImpl(
+  const resultOrPromise = navigateImpl(
     state,
     url,
     currentUrl,
@@ -1115,8 +1154,17 @@ async function ensurePrefetchThenNavigate(
     freshnessPolicy,
     scrollBehavior,
     navigateType,
-    navigationLock
+    navigationLock,
+    instrumentationTransition
   )
+  // Same asynchrony-derived instrumentation mark as in navigate(). The
+  // deliberate prefetch wait above is not marked: this testing path exists
+  // to simulate navigations whose prefetch completed before the
+  // user navigated.
+  if (isThenable(resultOrPromise)) {
+    markRouterTransitionAsNotInstant(instrumentationTransition)
+  }
+  const result = await resultOrPromise
 
   // Only transition to captured-SPA once the navigation is known to be an SPA.
   // If the result is an MPA navigation, leave the cookie pending and let the new

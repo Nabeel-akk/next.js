@@ -65,6 +65,16 @@ export type PendingRouterTransition = {
    * (see `sweepReplacedRouterTransitions`).
    */
   replaced: boolean
+  /**
+   * Backs the commit event's `instant` field: whether the router had
+   * something cached to render for the whole destination at dispatch — the
+   * route tree plus bytes for every fresh segment, where a shell that is
+   * entirely a dynamic hole still counts (the flag attributes cache
+   * coverage, deliberately not paint time). A one-way latch: starts `true`;
+   * unset by markRouterTransitionAsNotInstant at the sites where the
+   * navigation needed the network first, never set back.
+   */
+  instant: boolean
 }
 
 let instrumentationModules: readonly ClientInstrumentationHooks[] = []
@@ -177,6 +187,7 @@ export function startRouterTransition(
       url,
       tree: null,
       replaced: false,
+      instant: true,
     }
     pendingTransitions.push(transition)
 
@@ -317,7 +328,29 @@ function retargetRouterTransition(
   for (const transition of pendingTransitions) {
     if (transition.tree === fromTree) {
       transition.tree = toTree
+      // The commit now rides a tree derived from a server response (a
+      // refresh awaited its fetch, a mismatch retry corrects the predicted
+      // tree with the dynamic response, a destination-preserving server
+      // action returned new state), so the navigation needed the network
+      // before this commit could be built.
+      transition.instant = false
       return
+    }
+  }
+}
+
+/**
+ * Marks the transition as not instant, so its commit reports
+ * `instant: false`. Instant-ness is a one-way latch: a transition starts
+ * instant, any single wait flips it to not instant, and nothing (by design)
+ * flips it back.
+ */
+export function markRouterTransitionAsNotInstant(
+  transition: PendingRouterTransition | null
+): void {
+  if (process.env.__NEXT_INSTRUMENTATION_CLIENT_ROUTER_TRANSITION_EVENTS) {
+    if (transition !== null) {
+      transition.instant = false
     }
   }
 }
@@ -446,6 +479,12 @@ export function commitRouterTransition(state: AppRouterState): void {
               id: committed.id,
               timestamp: now,
               to,
+              // `instant` defaults to true and is only unset at the known
+              // wait sites, so a navigation that renders entirely from local
+              // data (including one that reuses the current UI, e.g.
+              // hash-only) reports instant without any code path having to
+              // say so.
+              instant: committed.instant,
             }
           )
         )
