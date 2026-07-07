@@ -1,11 +1,19 @@
 import type { IncomingMessage } from 'node:http'
+import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
 
 import {
   getWebSocketUpgradeMetadata,
   NextResponse,
 } from 'next/dist/server/web/spec-extension/response'
-import { writeRawHttpResponse } from 'next/dist/server/websocket-upgrade'
+import {
+  validateUpgradeResponseHeaders,
+  writeRawHttpResponse,
+} from 'next/dist/server/websocket-upgrade'
+import {
+  closeAllWebSockets,
+  registerWebSocketPeer,
+} from 'next/dist/server/websocket-connection-registry'
 
 describe('NextResponse.upgrade()', () => {
   const originalRuntime = process.env.NEXT_RUNTIME
@@ -91,5 +99,79 @@ describe('writeRawHttpResponse()', () => {
     expect(raw).toContain('set-cookie: second=2; Path=/\r\n')
     expect(raw).toContain('Transfer-Encoding: chunked\r\n')
     expect(raw).toContain('\r\n5\r\nhello\r\n0\r\n\r\n')
+  })
+})
+
+describe('validateUpgradeResponseHeaders()', () => {
+  it.each(['content-length', 'transfer-encoding'])(
+    'rejects the protocol-critical %s header',
+    (name) => {
+      expect(() =>
+        validateUpgradeResponseHeaders(
+          new Response(null, { headers: { [name]: '1' } })
+        )
+      ).toThrow(`protocol-critical "${name}" header`)
+    }
+  )
+})
+
+describe('WebSocket connection registry', () => {
+  afterEach(async () => {
+    jest.useRealTimers()
+    await closeAllWebSockets()
+  })
+
+  function createPeer() {
+    const websocket = new EventEmitter() as EventEmitter & {
+      readyState: number
+    }
+    websocket.readyState = 1
+
+    return {
+      websocket,
+      close: jest.fn(() => {
+        websocket.readyState = 2
+      }),
+      terminate: jest.fn(() => {
+        websocket.readyState = 3
+        websocket.emit('close')
+      }),
+    }
+  }
+
+  it('waits for peers to close before resolving', async () => {
+    const peer = createPeer()
+    registerWebSocketPeer('app/ws/route', peer as any)
+
+    const closed = closeAllWebSockets(1001)
+    expect(peer.close).toHaveBeenCalledWith(1001)
+
+    let resolved = false
+    void closed.then(() => {
+      resolved = true
+    })
+    await Promise.resolve()
+    expect(resolved).toBe(false)
+
+    peer.websocket.readyState = 3
+    peer.websocket.emit('close')
+    await closed
+    expect(resolved).toBe(true)
+    expect(peer.terminate).not.toHaveBeenCalled()
+  })
+
+  it('terminates peers after the grace period', async () => {
+    jest.useFakeTimers()
+    const peer = createPeer()
+    registerWebSocketPeer('app/ws/route', peer as any)
+
+    const closed = closeAllWebSockets(1001)
+    await Promise.resolve()
+
+    jest.advanceTimersByTime(5_000)
+    await closed
+
+    expect(peer.close).toHaveBeenCalledWith(1001)
+    expect(peer.terminate).toHaveBeenCalled()
   })
 })

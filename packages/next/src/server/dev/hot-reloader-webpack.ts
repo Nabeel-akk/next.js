@@ -1500,63 +1500,66 @@ export default class HotReloaderWebpack implements NextJsHotReloaderInterface {
       }
     )
 
-    this.multiCompiler.hooks.done.tap('NextjsHotReloaderForServer', (stats) => {
-      const reloadAfterInvalidation = this.reloadAfterInvalidation
-      this.reloadAfterInvalidation = false
+    this.multiCompiler.hooks.done.tapPromise(
+      'NextjsHotReloaderForServer',
+      async (stats) => {
+        const reloadAfterInvalidation = this.reloadAfterInvalidation
+        this.reloadAfterInvalidation = false
 
-      const serverOnlyChanges = difference<string>(
-        changedServerPages,
-        changedClientPages
-      )
+        const serverOnlyChanges = difference<string>(
+          changedServerPages,
+          changedClientPages
+        )
 
-      const edgeServerOnlyChanges = difference<string>(
-        changedEdgeServerPages,
-        changedClientPages
-      )
+        const edgeServerOnlyChanges = difference<string>(
+          changedEdgeServerPages,
+          changedClientPages
+        )
 
-      const pageChanges = serverOnlyChanges
-        .concat(edgeServerOnlyChanges)
-        .filter((key) => key.startsWith('pages/'))
+        const pageChanges = serverOnlyChanges
+          .concat(edgeServerOnlyChanges)
+          .filter((key) => key.startsWith('pages/'))
 
-      const middlewareChanges = [
-        ...Array.from(changedEdgeServerPages),
-        ...Array.from(changedServerPages),
-      ].filter((name) => isMiddlewareFilename(name))
+        const middlewareChanges = [
+          ...Array.from(changedEdgeServerPages),
+          ...Array.from(changedServerPages),
+        ].filter((name) => isMiddlewareFilename(name))
 
-      if (middlewareChanges.length > 0) {
-        this.send({
-          type: HMR_MESSAGE_SENT_TO_BROWSER.MIDDLEWARE_CHANGES,
-        })
+        if (middlewareChanges.length > 0) {
+          this.send({
+            type: HMR_MESSAGE_SENT_TO_BROWSER.MIDDLEWARE_CHANGES,
+          })
+        }
+
+        if (pageChanges.length > 0) {
+          this.send({
+            type: HMR_MESSAGE_SENT_TO_BROWSER.SERVER_ONLY_CHANGES,
+            pages: serverOnlyChanges.map((pg) =>
+              denormalizePagePath(pg.slice('pages'.length))
+            ),
+          })
+        }
+
+        if (
+          changedServerComponentPages.size ||
+          changedCSSImportPages.size ||
+          reloadAfterInvalidation
+        ) {
+          this.resetFetch()
+          this.refreshServerComponents(stats.hash)
+        }
+
+        for (const bundlePath of changedServerPages) {
+          await closeWebSocketsForBundle(bundlePath, 1012)
+        }
+
+        changedClientPages.clear()
+        changedServerPages.clear()
+        changedEdgeServerPages.clear()
+        changedServerComponentPages.clear()
+        changedCSSImportPages.clear()
       }
-
-      if (pageChanges.length > 0) {
-        this.send({
-          type: HMR_MESSAGE_SENT_TO_BROWSER.SERVER_ONLY_CHANGES,
-          pages: serverOnlyChanges.map((pg) =>
-            denormalizePagePath(pg.slice('pages'.length))
-          ),
-        })
-      }
-
-      if (
-        changedServerComponentPages.size ||
-        changedCSSImportPages.size ||
-        reloadAfterInvalidation
-      ) {
-        this.resetFetch()
-        this.refreshServerComponents(stats.hash)
-      }
-
-      for (const bundlePath of changedServerPages) {
-        closeWebSocketsForBundle(bundlePath, 1012)
-      }
-
-      changedClientPages.clear()
-      changedServerPages.clear()
-      changedEdgeServerPages.clear()
-      changedServerComponentPages.clear()
-      changedCSSImportPages.clear()
-    })
+    )
 
     this.multiCompiler.compilers[0].hooks.failed.tap(
       'NextjsHotReloaderForClient',

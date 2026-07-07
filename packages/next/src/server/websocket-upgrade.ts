@@ -24,9 +24,11 @@ if (process.env.__NEXT_EXPERIMENTAL_WEBSOCKET_ROUTE_HANDLERS) {
 
 const FORBIDDEN_UPGRADE_HEADERS = new Set([
   'connection',
+  'content-length',
   'sec-websocket-accept',
   'sec-websocket-extensions',
   'sec-websocket-protocol',
+  'transfer-encoding',
   'upgrade',
 ])
 const WEBSOCKET_TOKEN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
@@ -260,7 +262,7 @@ function validateHandshake(req: IncomingMessage): string | undefined {
   return undefined
 }
 
-function validateUpgradeResponseHeaders(response: Response): void {
+export function validateUpgradeResponseHeaders(response: Response): void {
   for (const name of response.headers.keys()) {
     if (FORBIDDEN_UPGRADE_HEADERS.has(name.toLowerCase())) {
       throw new TypeError(
