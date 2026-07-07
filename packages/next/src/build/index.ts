@@ -2754,6 +2754,10 @@ export default async function build(
           invocationCount: config.experimental.ppr ? 1 : 0,
         },
         {
+          featureName: 'experimental/webSocketRouteHandlers',
+          invocationCount: config.experimental.webSocketRouteHandlers ? 1 : 0,
+        },
+        {
           featureName: 'turbopackFileSystemCache',
           invocationCount: config.experimental?.turbopackFileSystemCacheForBuild
             ? 1

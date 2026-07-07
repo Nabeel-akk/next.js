@@ -455,6 +455,7 @@ export interface ExperimentalConfig {
   outputHashSalt?: string
 
   appNewScrollHandler?: boolean
+  webSocketRouteHandlers?: boolean
   useSkewCookie?: boolean
   /** @deprecated use top-level `cacheHandlers` instead */
   cacheHandlers?: NextConfig['cacheHandlers']
@@ -1983,6 +1984,7 @@ export const defaultConfig = Object.freeze({
   adapterPath: process.env.NEXT_ADAPTER_PATH || undefined,
   experimental: {
     appNewScrollHandler: false,
+    webSocketRouteHandlers: false,
     useSkewCookie: false,
     cssChunking: true,
     multiZoneDraftMode: false,
@@ -2182,6 +2184,7 @@ export interface NextConfigRuntime {
     | 'exposeTestingApiInProductionBuild'
     | 'supportsImmutableAssets'
     | 'instantInsights'
+    | 'webSocketRouteHandlers'
   > & {
     // Pick on @internal fields generates invalid .d.ts files
     /** @internal */
@@ -2251,6 +2254,7 @@ export function getNextConfigRuntime(
     exposeTestingApiInProductionBuild: ex.exposeTestingApiInProductionBuild,
     supportsImmutableAssets: ex.supportsImmutableAssets,
     instantInsights: ex.instantInsights,
+    webSocketRouteHandlers: ex.webSocketRouteHandlers,
 
     trustHostHeader: ex.trustHostHeader,
     isExperimentalCompile: ex.isExperimentalCompile,

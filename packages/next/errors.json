@@ -1303,5 +1303,17 @@
   "1302": "Attempted to advance to stage %s but the render is limited to %s",
   "1303": "Route \"%s\": A Client Component used \\`%s\\` outside of \\`<Suspense>\\`.\\n\\nThis prevents the route from being prerendered because the value is only available at runtime.\\n\\nWays to fix this:\\n  - [stream] Wrap the Client Component in \\`<Suspense fallback={...}>\\`\\n    https://nextjs.org/docs/messages/next-prerender-client-hook#wrap-the-client-component-in-suspense",
   "1304": "Route \"%s\": A Client Component used \\`%s\\` outside of \\`<Suspense>\\`.\\n\\nThis prevents the route from being prerendered because the value is only available at runtime.\\n\\nWays to fix this:\\n  - [stream] Wrap the Client Component in \\`<Suspense fallback={...}>\\`\\n    https://nextjs.org/docs/messages/next-prerender-client-hook#wrap-the-client-component-in-suspense\\n  - [prerender] If the dynamic params are known, prerender them with \\`generateStaticParams\\`\\n    https://nextjs.org/docs/messages/next-prerender-client-hook#prerender-known-dynamic-params",
-  "1305": "\\`partialPrefetching\\` requires \\`cacheComponents\\` to be enabled. Please update your %s accordingly."
+  "1305": "\\`partialPrefetching\\` requires \\`cacheComponents\\` to be enabled. Please update your %s accordingly.",
+  "1306": "NextResponse.upgrade() requires experimental.webSocketRouteHandlers to be enabled in next.config.js.",
+  "1307": "NextResponse.upgrade() is only supported in App Route Handlers and cannot be returned from proxy.ts.",
+  "1308": "NextResponse.upgrade() requires a hooks object.",
+  "1309": "NextResponse.upgrade() is not supported in the Edge Runtime.",
+  "1310": "NextResponse.upgrade() cannot set the protocol-critical \"%s\" header.",
+  "1311": "NextResponse.upgrade() hook \"%s\" must be a function.",
+  "1312": "WebSocket upgrade client disconnected.",
+  "1313": "Invalid %s in WebSocket upgrade response.",
+  "1314": "Route %s couldn't be rendered statically because it returned NextResponse.upgrade().",
+  "1315": "Invariant: CrossWS upgrade request is missing its App Route response.",
+  "1316": "WebSocket Route Handlers are unavailable because experimental.webSocketRouteHandlers is not enabled.",
+  "1317": "NextResponse.upgrade() does not support the \"%s\" hook."
 }
